@@ -23,7 +23,7 @@ import gi
 import logging
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from .dialog import AddDialog, EditDialog
+from .dialog import FpAddDialog, FpDeleteDialog
 
 try:
     import pyflatpak as Flatpak
@@ -36,7 +36,7 @@ _ = gettext.gettext
 
 class FlatpakList(Gtk.Box):
 
-    listiter_count = 0
+    listiter_count = Gtk.TreeIter()
 
     def __init__(self, parent):
         Gtk.Box.__init__(self, False, 0)
@@ -66,7 +66,7 @@ class FlatpakList(Gtk.Box):
         sources_title.set_halign(Gtk.Align.START)
         self.content_grid.attach(sources_title, 0, 0, 1, 1)
 
-        sources_label = Gtk.Label(_(""))
+        sources_label = Gtk.Label(_("These sources are for software installed as Flatpak apps"))
         sources_label.set_line_wrap(True)
         sources_label.set_halign(Gtk.Align.START)
         sources_label.set_justify(Gtk.Justification.FILL)
@@ -78,8 +78,23 @@ class FlatpakList(Gtk.Box):
         list_window = Gtk.ScrolledWindow()
         list_grid.attach(list_window, 0, 0, 1, 1)
 
-        renderer = Gtk.CellRendererText()
-        column = Gtk.TreeViewColumn(_("Source"), renderer, markup=0)
+        self.fp_liststore = Gtk.ListStore(str, str, str, str)
+        self.view = Gtk.TreeView(self.fp_liststore)
+        name_renderer = Gtk.CellRendererText()
+        url_renderer = Gtk.CellRendererText()
+        option_renderer = Gtk.CellRendererText()
+        name_column = Gtk.TreeViewColumn(_("Source"), name_renderer, markup=1)
+        url_column = Gtk.TreeViewColumn(_("URL"), url_renderer, markup=2)
+        option_column = Gtk.TreeViewColumn(_("Option"), option_renderer, markup=3)
+        self.view.append_column(name_column)
+        self.view.append_column(url_column)
+        self.view.append_column(option_column)
+        self.view.set_hexpand(True)
+        self.view.set_vexpand(True)
+        self.view.connect("row-activated", self.on_row_activated)
+        tree_selection = self.view.get_selection()
+        tree_selection.connect('changed', self.on_row_change)
+        list_window.add(self.view)
 
         # add button
         add_button = Gtk.ToolButton()
@@ -87,18 +102,82 @@ class FlatpakList(Gtk.Box):
         Gtk.StyleContext.add_class(add_button.get_style_context(),
                                    "image-button")
         add_button.set_tooltip_text(_("Add New Source"))
+        add_button.connect("clicked", self.on_add_button_clicked)
 
-        # edit button
-        edit_button = Gtk.ToolButton()
-        edit_button.set_icon_name("edit-symbolic")
-        Gtk.StyleContext.add_class(edit_button.get_style_context(),
+        # Delete button
+        delete_button = Gtk.ToolButton()
+        delete_button.set_icon_name("edit-delete-symbolic")
+        Gtk.StyleContext.add_class(delete_button.get_style_context(),
                                    "image-button")
-        edit_button.set_tooltip_text(_("Modify Selected Source"))
+        delete_button.set_tooltip_text(_("Delete Selected Source"))
+        delete_button.connect("clicked", self.on_delete_button_clicked)
 
         action_bar = Gtk.Toolbar()
         action_bar.set_icon_size(Gtk.IconSize.SMALL_TOOLBAR)
         Gtk.StyleContext.add_class(action_bar.get_style_context(),
                                    "inline-toolbar")
-        action_bar.insert(edit_button, 0)
+        action_bar.insert(delete_button, 0)
         action_bar.insert(add_button, 0)
         list_grid.attach(action_bar, 0, 1, 1, 1)
+
+        self.generate_entries(Flatpak.remotes.get_remotes())
+    
+    def generate_entries(self, fp_remotes_dict):
+        self.fp_liststore.clear()
+
+        for remote in fp_remotes_dict:
+            #row = self.fp_liststore.insert(-1)
+            self.fp_liststore.append(
+                [
+                    fp_remotes_dict[remote]['name'],
+                    fp_remotes_dict[remote]['title'],
+                    fp_remotes_dict[remote]['url'],
+                    fp_remotes_dict[remote]['option']
+                ]
+            )
+    
+    def on_row_activated(self, widget, data1, data2):
+        tree_iter = self.fp_liststore.get_iter(data1)
+        value = self.fp_liststore.get_value(tree_iter, 0)
+        self.log.info('Remote to delete: %s' % value)
+        self.do_delete(value)
+    
+    def on_row_change(self, widget):
+        (model, pathlist) = widget.get_selected_rows()
+        for path in pathlist :
+            tree_iter = model.get_iter(path)
+            value = model.get_value(tree_iter,1)
+            self.ppa_name = value
+
+    def on_add_button_clicked(self, widget):
+        #self.ppa.remove(self.ppa_name)
+        dialog = FpAddDialog(self.parent.parent)
+        response = dialog.run()
+
+        if response == Gtk.ResponseType.OK:
+            fp_name = dialog.fp_name_entry.get_text()
+            fp_url = dialog.fp_entry.get_text()
+            Flatpak.remotes.add_remote(fp_name, fp_url)
+            dialog.destroy()
+        else:
+            dialog.destroy()
+        self.generate_entries(Flatpak.remotes.get_remotes())
+    
+    def on_delete_button_clicked(self, widget):
+        selec = self.view.get_selection()
+        (model, pathlist) = selec.get_selected_rows()
+        tree_iter = model.get_iter(pathlist[0])
+        value = model.get_value(tree_iter, 0)
+        self.log.info("Remote to Delete: %s" % value)
+        self.do_delete(value)
+        
+    def do_delete(self, remote):
+        dialog = FpDeleteDialog(self.parent.parent)
+        response = dialog.run()
+
+        if response == Gtk.ResponseType.OK:
+            Flatpak.remotes.delete_remote(remote)
+            dialog.destroy()
+        else:
+            dialog.destroy()
+        self.generate_entries(Flatpak.remotes.get_remotes())

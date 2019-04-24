@@ -49,7 +49,7 @@ class List(Gtk.Box):
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
-        self.log.setLevel(logging.WARNING)
+        self.log.setLevel(logging.INFO)
 
         self.content_grid = Gtk.Grid()
         self.content_grid.set_margin_top(24)
@@ -127,7 +127,7 @@ class List(Gtk.Box):
     def on_row_activated(self, widget, data1, data2):
         tree_iter = self.ppa_liststore.get_iter(data1)
         value = self.ppa_liststore.get_value(tree_iter, 1)
-        self.log.info("PPA to edit: %s" % value)
+        self.log.warning("PPA to edit: %s" % value)
         self.do_edit(value)
 
     def do_edit(self, repo):
@@ -157,15 +157,29 @@ class List(Gtk.Box):
             for arch in source.architectures:
                 new_archs = "%s%s," % (new_archs, arch)
             new_archs = new_archs[:-1] + "]"
-            self.ppa.modify_ppa(source,
+            old_source = self.ppa.get_line(
+                source.disabled,
+                source.type,
+                source.architectures,
+                source.uri,
+                source.dist,
+                source.comps
+            )
+            print("debug:\ndiabled: {}\nrtype: {}\narchs: {}\nuri: {}\nversion: {}\ncomponent: {}".format(
+                    source.disabled, source.type, source.architectures,
+                    source.uri, source.dist, source.comps
+                ) )
+            self.ppa.modify_ppa(old_source,
                                 new_disabled,
                                 new_rtype,
                                 new_archs,
                                 new_uri,
                                 new_version,
                                 new_component)
+            self.generate_entries(self.ppa.get_isv())
         else:
             dialog.destroy()
+            self.generate_entries(self.ppa.get_isv())
 
     def on_add_button_clicked(self, widget):
         #self.ppa.remove(self.ppa_name)

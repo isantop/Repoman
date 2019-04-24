@@ -1,3 +1,10 @@
+repoman (1.1.0) disco; urgency=medium
+
+  * Flatpak Support
+  * Repoman now runs as unprivileged user and requests permission as needed
+
+ -- Ian Santopietro <isantop@gmail.com>  Wed, 24 Apr 2019 10:16:12 -0600
+
 repoman (1.0.2) bionic; urgency=medium
 
   * Minor fix for inline toolbar padding in Pop V3

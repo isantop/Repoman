@@ -22,7 +22,11 @@ from gi.repository import GObject
 import dbus
 import dbus.service
 import dbus.mainloop.glib
+
+import apt
 import time
+
+from softwareproperties.SoftwareProperties import SoftwareProperties
 
 class RepomanException(dbus.DBusException):
     _dbus_error_name = 'ro.santopiet.repoman.RepomanException'
@@ -30,7 +34,11 @@ class RepomanException(dbus.DBusException):
 class PermissionDeniedByPolicy(dbus.DBusException):
     _dbus_error_name = 'ro.santopiet.repoman.PermissionDeniedByPolicy'
 
+class AptException(Exception):
+    pass
+
 class PPAObject(dbus.service.Object):
+    cache = apt.Cache()
 
     def __init__(self, conn=None, object_path=None, bus_name=None):
         dbus.service.Object.__init__(self, conn, object_path, bus_name)
@@ -39,42 +47,75 @@ class PPAObject(dbus.service.Object):
         self.dbus_info = None
         self.polkit = None
         self.enforce_polkit = True
+        self.sp = SoftwareProperties()
     
     @dbus.service.method(
-        "ro.santopiet.repoman.RepomanInterface",
-        in_signature='s', out_signature='as',
-        sender_keyword='sender', connection_keyword='conn'
-    )
-    def AddPPA(self, deb_line, sender=None, conn=None):
-        print(deb_line)
-        self._check_polkit_privilege(
-            sender, conn,
-            'ro.santopiet.repoman.addppa'
-        )
-        # PPA Add Code Here
-        return [
-            'Added', deb_line, 'to system software sources.',
-            'From', bus.get_unique_name()
-        ]
-    
-    @dbus.service.method(
-        "ro.santopiet.repoman.RepomanInterface",
-        in_signature='s', out_signature='as',
+        "ro.santopiet.repoman.Interface",
+        in_signature='s', out_signature='i',
         sender_keyword='sender', connection_keyword='conn'
     )
     def DelPPA(self, ppa, sender=None, conn=None):
         self._check_polkit_privilege(
-            sender, conn,
-            'ro.santopiet.repoman.delppa'
+            sender, conn, 'ro.santopiet.repoman.delppa'
         )
         # PPA Remove code here
-        return [
-            'Removed', ppa, 'from system software sources.',
-            'From', bus.get_unique_name()
-        ]
+        try:
+            self.sp.reload_sourceslist()
+            self.sp.remove_source(ppa, remove_source_code=True)
+            self.sp.sourceslist.save()
+            self.sp.reload_sourceslist()
+            return 0
+        except:
+            raise AptException("Could not remove the APT Source")
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='s', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def AddPPA(self, ppa, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.addppa'
+        )
+        # PPA Add code here
+        try:
+            self.sp.reload_sourceslist()
+            self.sp.add_source_from_line(ppa)
+            self.sp.sourceslist.save()
+            self.sp.reload_sourceslist()
+            return 0
+        except:
+            raise AptException("Could not remove the APT Source")
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='ss', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def ModifyPPA(self, old_source, new_source, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        # PPA Modify code here
+        try:
+            source = self.sp._find_source_from_string(old_source)
+            print(type(source))
+            index = self.sp.sourceslist.list.index(source)
+            file = self.sp.sourceslist.list[index].file
+            new_source_entry = SourceEntry(new_source,file)
+            self.sp.sourceslist.list[index] = new_source_entry
+            self.sp.sourceslist.save()
+            self.cache.open()
+            self.cache.update()
+            self.cache.open(None)
+            self.cache.close()
+            self.sp.reload_sourceslist()
+            return 0
+        except:
+            raise AptException("Could not modify the APT Source")
 
     @dbus.service.method(
-        "ro.santopiet.repoman.RepomanInterface",
+        "ro.santopiet.repoman.Interface",
         in_signature='', out_signature='',
         sender_keyword='sender', connection_keyword='conn'
     )
@@ -82,7 +123,7 @@ class PPAObject(dbus.service.Object):
         raise RepomanException('Error managing software sources!')
     
     @dbus.service.method(
-        "ro.santopiet.repoman.RepomanInterface",
+        "ro.santopiet.repoman.Interface",
         in_signature='', out_signature='',
         sender_keyword='sender', connection_keyword='conn'
     )

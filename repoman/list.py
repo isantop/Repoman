@@ -127,7 +127,7 @@ class List(Gtk.Box):
     def on_row_activated(self, widget, data1, data2):
         tree_iter = self.ppa_liststore.get_iter(data1)
         value = self.ppa_liststore.get_value(tree_iter, 1)
-        self.log.warning("PPA to edit: %s" % value)
+        self.log.info("PPA to edit: %s" % value)
         self.do_edit(value)
 
     def do_edit(self, repo):

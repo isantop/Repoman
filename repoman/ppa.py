@@ -95,7 +95,7 @@ class AddThread(threading.Thread):
             remote_object.AddPPA(self.ppa)
         except:
             self.exc = sys.exc_info()
-            self.throw_error(self.exc)
+            self.throw_error(self.exc[1])
         self.sp.reload_sourceslist()
         isv_list = self.sp.get_isv_sources()
         GObject.idle_add(self.parent.parent.parent.stack.list_all.generate_entries, isv_list)
@@ -124,13 +124,16 @@ class ModifyThread(threading.Thread):
         self.log.setLevel(logging.WARNING)
 
     def run(self):
+        self.log.debug("Old source: %s" % self.old_source)
+        self.log.debug("New source: %s" % self.new_source)
+        
         try:
-            remote_object.ModifyPPA(
-                self.old_source, self.new_source
-            )
+            remote_object.ModifyPPA(self.old_source, self.new_source)
         except:
             self.exc = sys.exc_info()
             self.throw_error(self.exc[1])
+        
+        self.sp.reload_sourceslist()
         isv_list = self.sp.get_isv_sources()
         GObject.idle_add(self.parent.parent.parent.stack.list_all.generate_entries, isv_list)
         GObject.idle_add(self.parent.parent.parent.stack.list_all.view.set_sensitive, True)
@@ -196,26 +199,23 @@ class PPA:
 
     # Enable/Disable a component
     def set_comp_enabled(self, comp, enabled):
-        if enabled == True:
-            self.sp.enable_component(comp)
-        else:
-            self.sp.disable_component(comp)
+        self.log.info('Component: %s\nEnabled: %s' % (comp, enabled))
+        remote_object.SetCompEnabled(comp, enabled)
         return 0
 
     # Enable/Disable a child repo
     def set_child_enabled(self, child, enabled):
-        if enabled == True:
-            self.sp.enable_child_source(child)
-        else:
-            self.sp.disable_child_source(child)
+        self.log.info('Child: %s\nEnabled: %s' % (child, enabled))
+        try:
+            remote_object.SetChildEnabled(child.name, enabled)
+        except:
+            pass
         return 0
 
     # Enable/Disable source code
     def set_source_code_enabled(self, enabled):
-        if enabled == True:
-            self.sp.enable_source_code_sources()
-        elif enabled == False:
-            self.sp.disable_source_code_sources()
+        self.log.info('Source enabled: %s' % enabled)
+        remote_object.SetSourceCodeEnabled(enabled)
         return 0
 
     def get_line(self, isdisabled, rtype, archs, uri, version, component):

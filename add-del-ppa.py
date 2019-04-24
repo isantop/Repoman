@@ -24,6 +24,7 @@ import dbus.service
 import dbus.mainloop.glib
 
 import apt
+from aptsources.sourceslist import SourceEntry
 import time
 
 from softwareproperties.SoftwareProperties import SoftwareProperties
@@ -98,8 +99,12 @@ class PPAObject(dbus.service.Object):
         )
         # PPA Modify code here
         try:
-            source = self.sp._find_source_from_string(old_source)
-            print(type(source))
+            self.sp.reload_sourceslist()
+            old_source = self._strip_source_line(old_source)
+            isvs = self.sp.get_isv_sources()
+            for i in isvs:
+                if str(i) == old_source:
+                    source = i
             index = self.sp.sourceslist.list.index(source)
             file = self.sp.sourceslist.list[index].file
             new_source_entry = SourceEntry(new_source,file)
@@ -113,6 +118,58 @@ class PPAObject(dbus.service.Object):
             return 0
         except:
             raise AptException("Could not modify the APT Source")
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='sb', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def SetCompEnabled(self, comp_name, is_enabled, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        # PPA Modify code here
+        if is_enabled:
+            self.sp.enable_component(comp_name)
+        else: 
+            self.sp.disable_component(comp_name)
+        return 0
+
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='sb', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def SetChildEnabled(self, child_name, is_enabled, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        # PPA Modify code here
+        repos = self.sp.distro.source_template.children
+        for repo in repos:
+            if repo.name == child_name:
+                child = repo
+        if is_enabled:
+            self.sp.enable_child_source(child)
+        else: 
+            self.sp.disable_child_source(child)
+        return 0
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='b', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def SetSourceCodeEnabled(self, is_enabled, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        # PPA Modify code here
+        if is_enabled:
+            self.sp.enable_source_code_sources()
+        else: 
+            self.sp.disable_source_code_sources()
+        return 0
 
     @dbus.service.method(
         "ro.santopiet.repoman.Interface",
@@ -136,6 +193,49 @@ class PPAObject(dbus.service.Object):
         ff = open(filename, "a")
         ff.write("%s : %s\n" %(date,str(string)))
         ff.close()
+    
+    @classmethod
+    def _strip_source_line(self, source):
+        source = source.replace("#", "# ")
+        source = source.replace("[", "")
+        source = source.replace("]", "")
+        source = source.replace("'", "")
+        source = source.replace("  ", " ")
+        return source
+    
+    # Returns the current distro Components.
+    @classmethod
+    def get_distro_sources(self):
+        components = self.sp.distro.source_template.components
+        return components
+
+    # Returns the current child repos (updates)
+    @classmethod
+    def get_distro_child_repos(self):
+        repos = self.sp.distro.source_template.children
+        return repos
+
+    # Get whether a component is enabled or not
+    @classmethod
+    def get_comp_download_state(self, comp):
+        (active, inconsistent) = self.sp.get_comp_download_state(comp)
+        return (active, inconsistent)
+
+    # Get whether a child repo is enabled or not
+    @classmethod
+    def get_child_download_state(self, child):
+        (active, inconsistent) = self.sp.get_comp_child_state(child)
+        self.log.debug(child.name + " (" + str(active) + ", " + str(inconsistent) + ")")
+        return (active, inconsistent)
+
+    # Get Source Code State
+    @classmethod
+    def get_source_code_enabled(self):
+        enabled = self.sp.get_source_code_state()
+        if enabled == None:
+            return(False, True)
+        else:
+            return (enabled, False)
 
     def _check_polkit_privilege(self, sender, conn, privilege):
         # from jockey

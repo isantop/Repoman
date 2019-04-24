@@ -160,7 +160,7 @@ class PPA:
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
-        self.log.setLevel(logging.INFO)
+        self.log.setLevel(logging.WARNING)
 
     # Returns a list of all 3rd-party software sources.
     def get_isv(self):

@@ -202,40 +202,6 @@ class PPAObject(dbus.service.Object):
         source = source.replace("'", "")
         source = source.replace("  ", " ")
         return source
-    
-    # Returns the current distro Components.
-    @classmethod
-    def get_distro_sources(self):
-        components = self.sp.distro.source_template.components
-        return components
-
-    # Returns the current child repos (updates)
-    @classmethod
-    def get_distro_child_repos(self):
-        repos = self.sp.distro.source_template.children
-        return repos
-
-    # Get whether a component is enabled or not
-    @classmethod
-    def get_comp_download_state(self, comp):
-        (active, inconsistent) = self.sp.get_comp_download_state(comp)
-        return (active, inconsistent)
-
-    # Get whether a child repo is enabled or not
-    @classmethod
-    def get_child_download_state(self, child):
-        (active, inconsistent) = self.sp.get_comp_child_state(child)
-        self.log.debug(child.name + " (" + str(active) + ", " + str(inconsistent) + ")")
-        return (active, inconsistent)
-
-    # Get Source Code State
-    @classmethod
-    def get_source_code_enabled(self):
-        enabled = self.sp.get_source_code_state()
-        if enabled == None:
-            return(False, True)
-        else:
-            return (enabled, False)
 
     def _check_polkit_privilege(self, sender, conn, privilege):
         # from jockey

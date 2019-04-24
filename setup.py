@@ -19,7 +19,7 @@ setup(
         ('/etc/dbus-1/system.d/', ['data/ro.santopiet.repoman.conf']),
         ('/usr/share/applications', ['data/repoman.desktop']),
         ('/usr/share/repoman', ['data/style.css']),
-        ('/usr/lib/repoman', ['add-del-ppa.py'])
+        ('/usr/lib/repoman', ['add-del-ppa.py', 'data/repoman.pkexec'])
     ],
     scripts = ['repoman/repoman'],
 )

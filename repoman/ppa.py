@@ -157,7 +157,7 @@ class PPA:
     cache = apt.Cache()
     sp = SoftwareProperties()
 
-    def __init__(self, parent):
+    def __init__(self, parent=None):
         self.parent = parent
 
         self.log = logging.getLogger("repoman.Updates")
@@ -262,8 +262,11 @@ class PPA:
 
     # Starts a new thread to add a repository
     def add(self, url):
-        self.parent.parent.parent.hbar.spinner.start()
-        self.parent.parent.parent.stack.list_all.view.set_sensitive(False)
+        try:
+            self.parent.parent.parent.hbar.spinner.start()
+            self.parent.parent.parent.stack.list_all.view.set_sensitive(False)
+        except:
+            pass
         t = AddThread(self.parent, url, self.sp)
         t.start()
 

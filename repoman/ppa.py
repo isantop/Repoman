@@ -200,7 +200,11 @@ class PPA:
     # Enable/Disable a component
     def set_comp_enabled(self, comp, enabled):
         self.log.info('Component: %s\nEnabled: %s' % (comp, enabled))
-        remote_object.SetCompEnabled(comp, enabled)
+        try:
+            remote_object.SetCompEnabled(comp, enabled)
+        except:
+            self.exc = sys.exc_info()
+            self.throw_error(self.exc[1])
         return 0
 
     # Enable/Disable a child repo
@@ -209,13 +213,18 @@ class PPA:
         try:
             remote_object.SetChildEnabled(child.name, enabled)
         except:
-            pass
+            self.exc = sys.exc_info()
+            self.throw_error(self.exc[1])
         return 0
 
     # Enable/Disable source code
     def set_source_code_enabled(self, enabled):
         self.log.info('Source enabled: %s' % enabled)
-        remote_object.SetSourceCodeEnabled(enabled)
+        try:
+            remote_object.SetSourceCodeEnabled(enabled)
+        except:
+            self.exc = sys.exc_info()
+            self.throw_error(self.exc[1])
         return 0
 
     def get_line(self, isdisabled, rtype, archs, uri, version, component):
@@ -305,4 +314,8 @@ class PPA:
             return "your OS"
 
         return "your OS"
+
+    def throw_error(self, message):
+        GObject.idle_add(self.parent.parent.parent.stack.list_all.throw_error_dialog,
+                         message, "error")
 

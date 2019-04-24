@@ -17,6 +17,7 @@ setup(
         ('/usr/share/dbus-1/system-services', ['data/ro.santopiet.repoman.service']),
         ('/usr/share/polkit-1/actions', ['data/ro.santopiet.repoman.policy']),
         ('/etc/dbus-1/system.d/', ['data/ro.santopiet.repoman.conf']),
+        ('/usr/share/applications', ['data/repoman.desktop']),
         ('/usr/share/repoman', ['data/style.css']),
         ('/usr/lib/repoman', ['add-del-ppa.py'])
     ],

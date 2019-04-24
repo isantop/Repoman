@@ -254,7 +254,6 @@ class PPA:
     # Modify an existing PPA
     def modify_ppa(self, old_source, disabled, rtype, archs, uri, version, component):
         self.log.info("Old source: %s" % old_source)
-        print(type(old_source))
         line = self.get_line(disabled, rtype, archs, uri, version, component)
         self.log.info("New source: %s" % line)
         self.parent.parent.parent.hbar.spinner.start()

@@ -165,10 +165,6 @@ class List(Gtk.Box):
                 source.dist,
                 source.comps
             )
-            print("debug:\ndiabled: {}\nrtype: {}\narchs: {}\nuri: {}\nversion: {}\ncomponent: {}".format(
-                    source.disabled, source.type, source.architectures,
-                    source.uri, source.dist, source.comps
-                ) )
             self.ppa.modify_ppa(old_source,
                                 new_disabled,
                                 new_rtype,

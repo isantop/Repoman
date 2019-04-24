@@ -15,6 +15,11 @@ Repoman is based on [PPAExtender](https://github.com/mirkobrombin/PPAExtender)
 - libgranite-dev
 - software-properties-common
 
+### Flatpak Support
+Repoman has support for managing flatpak remotes. In order to enable this 
+support, you must have [PyFlatPak](https://github.com/isantop/pyflatpak)
+installed and available.
+
 ## Installation
 **Be careful**, modifying PPAs can damage your system.
 

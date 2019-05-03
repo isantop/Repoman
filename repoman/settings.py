@@ -19,10 +19,12 @@
     along with Repoman.  If not, see <http://www.gnu.org/licenses/>.
 '''
 
+import logging
+
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-# from .ppa import PPA
+from .repo import Repo
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -38,8 +40,25 @@ class Settings(Gtk.Box):
         # self.os_name = self.ppa.get_os_name()
         self.os_name = "TESTING"
         self.handlers = {}
-
+        self.repo = Repo()
         self.parent = parent
+        self.log = logging.getLogger('repoman.Settings')
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        handler.setFormatter(formatter)
+        self.log.addHandler(handler)
+        self.log.setLevel(logging.DEBUG)
+        self.log.debug('Loaded settings!')
+
+        self.system_comps = self.repo.get_system_comps()
+        self.system_source_code = self.repo.get_source_code_enabled(
+            source='system'
+        )
+        self.log.debug('System source code enabled: %s' % self.system_source_code)
+        self.codename = self.repo.get_codename()
+        self.proposed_updates = False
+        if '{}-proposed'.format(self.codename) in self.repo.get_system_suites():
+            self.proposed_updates = True
 
         settings_grid = Gtk.Grid()
         settings_grid.set_margin_left(12)
@@ -122,14 +141,13 @@ class Settings(Gtk.Box):
 
         self.source_check = Gtk.CheckButton(label=_('Include Source Code'))
         self.source_check.set_halign(Gtk.Align.START)
-        # source_label = Gtk.Label(_('Include Source Code'))
-        # source_label.set_halign(Gtk.Align.START)
-        # source_label.connect('clicked', self.on_source_label_clicked)
+        self.source_check.set_active(self.system_source_code)
         proposed_label = Gtk.Label(_('Unstable Updates (proposed)'))
         proposed_label.set_halign(Gtk.Align.START)
         proposed_label.set_hexpand(True)
         self.proposed_switch = Gtk.Switch()
         self.proposed_switch.set_halign(Gtk.Align.END)
+        self.proposed_switch.set_active(self.proposed_updates)
         self.proposed_switch.set_hexpand(True)
 
 
@@ -141,100 +159,21 @@ class Settings(Gtk.Box):
 
         #self.init_distro()
         #self.show_distro()
-    
-    def on_source_label_clicked(self, widget):
-        if self.source_check.get_active:
-            self.source_check.set_active(False)
-        else:
-            self.source_check.set_active(True)
+        self.setup_comps()
+        self.show_all()
 
-    # def block_handlers(self):
-    #     for widget in self.handlers:
-    #         if widget.handler_is_connected(self.handlers[widget]):
-    #             widget.handler_block(self.handlers[widget])
-
-    # def unblock_handlers(self):
-    #     for widget in self.handlers:
-    #         if widget.handler_is_connected(self.handlers[widget]):
-    #             widget.handler_unblock(self.handlers[widget])
-
-    # def init_distro(self):
-
-    #     self.handlers[self.source_check] = \
-    #                           self.source_check.connect("toggled",
-    #                                                                self.on_source_check_toggled)
-
-    #     for checkbutton in self.checks_grid.get_children():
-    #         self.checks_grid.remove(checkbutton)
-
-        # distro_comps = self.ppa.get_distro_sources()
-
-        # for comp in distro_comps:
-        #     description = comp.description
-        #     if description == 'Non-free drivers':
-        #         description = _("Proprietary Drivers for Devices")
-        #     elif description == 'Restricted software':
-        #         description = _("Software with Copyright or Legal Restrictions")
-        #     else:
-        #         description = description + " software"
-
-        #     label = "%s (%s)" % (description, comp.name)
-        #     checkbox = Gtk.CheckButton(label=label)
-
-        #     checkbox.comp = comp
-        #     self.handlers[checkbox] = checkbox.connect("toggled",
-        #                                                self.on_component_toggled,
-        #                                                comp.name)
-
-        #     self.checks_grid.add(checkbox)
-        #     checkbox.show()
-
-        # child_repos = self.ppa.get_distro_child_repos()
-        # for template in child_repos:
-        #     if template.type == "deb-src":
-        #         continue
-
-        #     if "proposed" in template.name:
-        #         self.proposed_check.set_label("%s (%s)" % (template.description,
-        #                                                    template.name))
-        #         self.proposed_check.template = template
-        #         self.handlers[self.proposed_check] = self.proposed_check.connect("toggled",
-        #                                            self.on_proposed_check_toggled,
-        #                                            template)
-
-        # return 0
-
-    # def show_distro(self):
-    #     self.block_handlers()
-
-    #     for checkbox in self.checks_grid.get_children():
-    #         (active, inconsistent) = self.ppa.get_comp_download_state(checkbox.comp)
-    #         checkbox.set_active(active)
-    #         checkbox.set_inconsistent(inconsistent)
-
-    #     (src_active, src_inconsistent) = self.ppa.get_source_code_enabled()
-    #     self.source_check.set_active(src_active)
-    #     self.source_check.set_inconsistent(src_inconsistent)
-
-    #     (prop_active, prop_inconsistent) = self.ppa.get_child_download_state(self.proposed_check.template)
-    #     self.proposed_check.set_active(prop_active)
-    #     self.proposed_check.set_inconsistent(prop_inconsistent)
-
-    #     self.unblock_handlers()
-    #     return 0
-
-    # def on_component_toggled(self, checkbutton, comp):
-    #     enabled = checkbutton.get_active()
-    #     self.ppa.set_comp_enabled(comp, enabled)
-    #     return 0
-
-    # def on_source_check_toggled(self, checkbutton):
-    #     enabled = checkbutton.get_active()
-    #     self.ppa.set_source_code_enabled(enabled)
-    #     return 0
-
-    # def on_proposed_check_toggled(self, checkbutton, comp):
-    #     enabled = checkbutton.get_active()
-    #     self.ppa.set_child_enabled(comp, enabled)
-    #     return 0
+    def setup_comps(self):
+        """
+        Sets the initial state of the switches in the window.
+        """
+        suite_switches = {
+            'main':       self.main_switch,
+            'universe':   self.universe_switch,
+            'restricted': self.restricted_switch,
+            'multiverse': self.multiverse_switch
+        }
+        for i in self.system_comps:
+            self.log.debug('Got suite: %s' % i)
+            if i in suite_switches:
+                suite_switches[i].set_active(True)
     

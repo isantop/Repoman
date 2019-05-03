@@ -23,11 +23,10 @@ import dbus
 import dbus.service
 import dbus.mainloop.glib
 
-import apt
-from aptsources.sourceslist import SourceEntry
 import time
 
-from softwareproperties.SoftwareProperties import SoftwareProperties
+
+import repolib
 
 class RepomanException(dbus.DBusException):
     _dbus_error_name = 'ro.santopiet.repoman.RepomanException'
@@ -39,7 +38,6 @@ class AptException(Exception):
     pass
 
 class PPAObject(dbus.service.Object):
-    cache = apt.Cache()
 
     def __init__(self, conn=None, object_path=None, bus_name=None):
         dbus.service.Object.__init__(self, conn, object_path, bus_name)
@@ -48,7 +46,7 @@ class PPAObject(dbus.service.Object):
         self.dbus_info = None
         self.polkit = None
         self.enforce_polkit = True
-        self.sp = SoftwareProperties()
+        # self.sp = SoftwareProperties()
     
     @dbus.service.method(
         "ro.santopiet.repoman.Interface",
@@ -61,13 +59,112 @@ class PPAObject(dbus.service.Object):
         )
         # PPA Remove code here
         try:
-            self.sp.reload_sourceslist()
-            self.sp.remove_source(ppa, remove_source_code=True)
-            self.sp.sourceslist.save()
-            self.sp.reload_sourceslist()
             return 0
         except:
             raise AptException("Could not remove the APT Source")
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='ss', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def AddComp(self, repo, comp, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        
+        try:
+            source = repolib.Source()
+            source.load_from_file(filename='{}.sources'.format(repo))
+            if not comp in source.components:
+                source.components.append(comp)
+            source.components.sort()
+            source.save_to_disk()
+            return 0
+        except:
+            raise AptException("Could not add %s to source %s" % (comp, repo))
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='ss', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def DelComp(self, repo, comp, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        
+        try:
+            source = repolib.Source()
+            source.load_from_file(filename='{}.sources'.format(repo))
+            if comp in source.components:
+                source.components.remove(comp)
+            source.components.sort()
+            source.save_to_disk()
+            return 0
+        except:
+            raise AptException("Could not add %s to source %s" % (comp, repo))
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='ss', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def AddSuite(self, repo, suite, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        
+        try:
+            source = repolib.Source()
+            source.load_from_file(filename='{}.sources'.format(repo))
+            if not suite in source.suites:
+                source.suites.append(suite)
+            source.suites.sort()
+            source.save_to_disk()
+            return 0
+        except:
+            raise AptException("Could not add %s to source %s" % (comp, repo))
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='ss', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def DelSuite(self, repo, suite, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        
+        try:
+            source = repolib.Source()
+            source.load_from_file(filename='{}.sources'.format(repo))
+            if suite in source.suites:
+                source.suites.remove(suite)
+            source.suites.sort()
+            source.save_to_disk()
+            return 0
+        except:
+            raise AptException("Could not add %s to source %s" % (comp, repo))
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='sb', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def SetSource(self, repo, state, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        
+        try:
+            source = repolib.Source()
+            source.load_from_file(filename='{}.sources'.format(repo))
+            source.set_source_enabled(state)
+            source.save_to_disk()
+            return 0
+        except:
+            raise AptException("Could not add %s to source %s" % (comp, repo))
     
     @dbus.service.method(
         "ro.santopiet.repoman.Interface",
@@ -80,10 +177,6 @@ class PPAObject(dbus.service.Object):
         )
         # PPA Add code here
         try:
-            self.sp.reload_sourceslist()
-            self.sp.add_source_from_line(ppa)
-            self.sp.sourceslist.save()
-            self.sp.reload_sourceslist()
             return 0
         except:
             raise AptException("Could not remove the APT Source")
@@ -99,22 +192,6 @@ class PPAObject(dbus.service.Object):
         )
         # PPA Modify code here
         try:
-            self.sp.reload_sourceslist()
-            old_source = self._strip_source_line(old_source)
-            isvs = self.sp.get_isv_sources()
-            for i in isvs:
-                if str(i) == old_source:
-                    source = i
-            index = self.sp.sourceslist.list.index(source)
-            file = self.sp.sourceslist.list[index].file
-            new_source_entry = SourceEntry(new_source,file)
-            self.sp.sourceslist.list[index] = new_source_entry
-            self.sp.sourceslist.save()
-            self.cache.open()
-            self.cache.update()
-            self.cache.open(None)
-            self.cache.close()
-            self.sp.reload_sourceslist()
             return 0
         except:
             raise AptException("Could not modify the APT Source")
@@ -129,10 +206,6 @@ class PPAObject(dbus.service.Object):
             sender, conn, 'ro.santopiet.repoman.modppa'
         )
         # PPA Modify code here
-        if is_enabled:
-            self.sp.enable_component(comp_name)
-        else: 
-            self.sp.disable_component(comp_name)
         return 0
 
     @dbus.service.method(
@@ -145,14 +218,6 @@ class PPAObject(dbus.service.Object):
             sender, conn, 'ro.santopiet.repoman.modppa'
         )
         # PPA Modify code here
-        repos = self.sp.distro.source_template.children
-        for repo in repos:
-            if repo.name == child_name:
-                child = repo
-        if is_enabled:
-            self.sp.enable_child_source(child)
-        else: 
-            self.sp.disable_child_source(child)
         return 0
     
     @dbus.service.method(
@@ -164,11 +229,6 @@ class PPAObject(dbus.service.Object):
         self._check_polkit_privilege(
             sender, conn, 'ro.santopiet.repoman.modppa'
         )
-        # PPA Modify code here
-        if is_enabled:
-            self.sp.enable_source_code_sources()
-        else: 
-            self.sp.disable_source_code_sources()
         return 0
 
     @dbus.service.method(

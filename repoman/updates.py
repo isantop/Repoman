@@ -23,7 +23,9 @@ import logging
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-# from .ppa import PPA
+
+from .repo import Repo
+
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -39,14 +41,17 @@ class Updates(Gtk.Box):
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
-        self.log.setLevel(logging.WARNING)
+        self.log.setLevel(logging.DEBUG)
+        self.log.debug('Loaded repoman.Updates')
+        self.repo = Repo()
 
         self.parent = parent
 
-        # self.ppa = PPA(self)
-        # self.os_name = self.ppa.get_os_name()
         self.os_name = "TESTING"
         self.handlers = {}
+
+        self.codename = self.repo.get_codename()
+        self.system_suites = self.repo.get_system_suites()
 
         updates_grid = Gtk.Grid()
         updates_grid.set_margin_left(12)
@@ -132,61 +137,23 @@ class Updates(Gtk.Box):
         version_check = Gtk.CheckButton.new_with_label(_("Notify about new versions of %s") % self.os_name)
         self.noti_grid.attach(version_check, 0, 2, 1, 1)
 
-        #self.init_updates()
-        #self.show_updates()
+        self.setup_suites()
+    
+    def setup_suites(self):
+        """
+        Sets the initial state of the switches in the window.
+        """
+        suite_switches = {
+            '-security':  self.security_switch,
+            '-updates':   self.updates_switch,
+            '-backports': self.backports_switch
+        }
+        for i in self.system_suites:
+            suite = i.replace(self.codename, '')
+            self.log.debug('Got suite: %s' % suite)
+            if suite in suite_switches:
+                suite_switches[suite].set_active(True)
+    
 
-    def block_handlers(self):
-        for widget in self.handlers:
-            if widget.handler_is_connected(self.handlers[widget]):
-                widget.handler_block(self.handlers[widget])
 
-    def unblock_handlers(self):
-        for widget in self.handlers:
-            if widget.handler_is_connected(self.handlers[widget]):
-                widget.handler_unblock(self.handlers[widget])
-
-    def init_updates(self):
-        self.log.debug("init_distro")
-
-        for checkbutton in self.checks_grid.get_children():
-            self.checks_grid.remove(checkbutton)
-
-        # comp_children = self.ppa.get_distro_child_repos()
-
-        # for template in comp_children:
-        #     # Do not show -proposed or source entries here
-        #     if template.type == "deb-src":
-        #         continue
-        #     if "proposed" in template.name:
-        #         continue
-
-        #     if template.description == "Unsupported Updates":
-        #         description = _("Backported Updates")
-        #     else:
-        #         description = template.description
-
-        #     checkbox = Gtk.CheckButton(label="%s (%s)" % (description,
-        #                                                   template.name))
-        #     checkbox.template = template
-        #     self.handlers[checkbox] = checkbox.connect("toggled",
-        #                                                self.on_child_toggled,
-        #                                                template)
-        #     self.checks_grid.add(checkbox)
-        #     checkbox.show()
-        # return 0
-
-    def show_updates(self):
-        # self.block_handlers()
-        self.log.debug("show updates")
-
-        # for checkbox in self.checks_grid.get_children():
-        #     # (active, inconsistent) = self.ppa.get_child_download_state(checkbox.template)
-        #     checkbox.set_active(active)
-        #     checkbox.set_inconsistent(inconsistent)
-        # self.unblock_handlers()
-        return 0
-
-    # def on_child_toggled(self, checkbutton, child):
-    #     enabled = checkbutton.get_active()
-    #     self.ppa.set_child_enabled(child, enabled)
 

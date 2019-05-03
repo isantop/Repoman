@@ -24,14 +24,15 @@ import logging
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+
 from .repo import Repo
+
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
 _ = gettext.gettext
 
 class Settings(Gtk.Box):
-
 
     def __init__(self, parent):
         Gtk.Box.__init__(self, False, 0)
@@ -52,7 +53,7 @@ class Settings(Gtk.Box):
 
         self.system_comps = self.repo.get_system_comps()
         self.system_source_code = self.repo.get_source_code_enabled(
-            source='system'
+            source_name='system'
         )
         self.log.debug('System source code enabled: %s' % self.system_source_code)
         self.codename = self.repo.get_codename()
@@ -105,12 +106,20 @@ class Settings(Gtk.Box):
         self.main_switch = Gtk.Switch()
         self.main_switch.set_halign(Gtk.Align.END)
         self.main_switch.set_hexpand(True)
+        self.main_switch.component_name = 'main'
+        self.main_switch.connect('state-set', self.on_switch_toggled)
         self.universe_switch = Gtk.Switch()
         self.universe_switch.set_halign(Gtk.Align.END)
+        self.universe_switch.component_name = 'universe'
+        self.universe_switch.connect('state-set', self.on_switch_toggled)
         self.restricted_switch = Gtk.Switch()
         self.restricted_switch.set_halign(Gtk.Align.END)
+        self.restricted_switch.component_name = 'restricted'
+        self.restricted_switch.connect('state-set', self.on_switch_toggled)
         self.multiverse_switch = Gtk.Switch()
         self.multiverse_switch.set_halign(Gtk.Align.END)
+        self.multiverse_switch.component_name = 'multiverse'
+        self.multiverse_switch.connect('state-set', self.on_switch_toggled)
 
 
         self.checks_grid.attach(self.main_switch, 1, 0, 1, 1)
@@ -142,12 +151,14 @@ class Settings(Gtk.Box):
         self.source_check = Gtk.CheckButton(label=_('Include Source Code'))
         self.source_check.set_halign(Gtk.Align.START)
         self.source_check.set_active(self.system_source_code)
+        self.source_check.connect('toggled', self.on_source_toggled)
         proposed_label = Gtk.Label(_('Unstable Updates (proposed)'))
         proposed_label.set_halign(Gtk.Align.START)
         proposed_label.set_hexpand(True)
         self.proposed_switch = Gtk.Switch()
         self.proposed_switch.set_halign(Gtk.Align.END)
         self.proposed_switch.set_active(self.proposed_updates)
+        self.proposed_switch.connect('state-set', self.on_proposed_toggled)
         self.proposed_switch.set_hexpand(True)
 
 
@@ -157,23 +168,63 @@ class Settings(Gtk.Box):
         self.developer_grid.attach(proposed_label, 0, 2, 1, 1)
         self.developer_grid.attach(self.proposed_switch, 1, 2, 1, 1)
 
-        #self.init_distro()
-        #self.show_distro()
-        self.setup_comps()
-        self.show_all()
-
-    def setup_comps(self):
-        """
-        Sets the initial state of the switches in the window.
-        """
-        suite_switches = {
+        self.component_switches = {
             'main':       self.main_switch,
             'universe':   self.universe_switch,
             'restricted': self.restricted_switch,
             'multiverse': self.multiverse_switch
         }
+        #self.init_distro()
+        #self.show_distro()
+        self.setup_comps()
+        self.show_all()
+    
+    def on_source_toggled(self, widget):
+        """Handler for source-code check."""
+        self.repo.set_source_code_enabled(
+            source_name='system',
+            is_enabled=widget.get_active()
+        )
+    
+    def on_proposed_toggled(self, widget, data=None):
+        """ Handler for proposed switch. """
+        if not widget.get_active():
+            self.log.debug('Disabling Proposed')
+            self.repo.remove_suite_from_source(
+                source_name='system',
+                suite='{}-proposed'.format(self.codename)
+            )
+        else:
+            self.log.debug('Enabling Proposed')
+            self.repo.add_suite_to_source(
+                source_name='system',
+                suite='{}-proposed'.format(self.codename)
+            )
+    
+    def on_switch_toggled(self, widget, data=None):
+        """
+        Handler for switches.
+        """
+        if not widget.get_active():
+            self.log.debug('Disabling system component: %s' % widget.component_name)
+            self.repo.remove_comp_from_source(
+                source_name='system',
+                component=widget.component_name
+            )
+        else:
+            self.log.debug('Enabling system component: %s' % widget.component_name)
+            self.repo.add_comp_to_source(
+                source_name='system',
+                component=widget.component_name
+            )
+
+    def setup_comps(self):
+        """
+        Sets the initial state of the switches in the window.
+        """
+        
         for i in self.system_comps:
-            self.log.debug('Got suite: %s' % i)
-            if i in suite_switches:
-                suite_switches[i].set_active(True)
+            self.log.debug('Got component: %s' % i)
+            if i in self.component_switches:
+                self.component_switches[i].set_active(True)
     

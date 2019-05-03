@@ -38,6 +38,12 @@ GLib.threads_init()
 
 SOURCES_DIR = '/etc/apt/sources.list.d'
 
+bus = dbus.SystemBus()
+
+privileged_object = bus.get_object(
+    'ro.santopiet.repoman', '/PPAObject'
+)
+
 class Repo:
 
     def __init__(self, parent=None):
@@ -66,12 +72,12 @@ class Repo:
         system_comps = self.system_source.components
         return system_comps
     
-    def get_source_code_enabled(self, source='system'):
+    def get_source_code_enabled(self, source_name='system'):
         """
         Returns TRUE if source code is enabled for REPO.
         """
 
-        source_check = repolib.Source(filename='{}.sources'.format(source))
+        source_check = repolib.Source(filename='{}.sources'.format(source_name))
         source_check.load_from_file()
         self.log.debug('Found types: %s' % source_check.types)
         for type in source_check.types:
@@ -81,8 +87,30 @@ class Repo:
         
         return False
     
+    def set_source_code_enabled(self, source_name='system', is_enabled=True):
+        """
+        Enables or disabled source code for the repo.
+        """
+        privileged_object.SetSource(source_name, is_enabled)
+    
     def get_codename(self):
         """
         Gets the current distro codename.
         """
         return repolib.util.DISTRO_CODENAME
+    
+    def add_comp_to_source(self, source_name='system', component='main'):
+        privileged_object.AddComp(source_name, component)
+        return 0
+    
+    def remove_comp_from_source(self, source_name='system', component='main'):
+        privileged_object.DelComp(source_name, component)
+        return 0
+    
+    def add_suite_to_source(self, source_name='system', suite='main'):
+        privileged_object.AddSuite(source_name, suite)
+        return 0
+    
+    def remove_suite_from_source(self, source_name='system', suite='main'):
+        privileged_object.DelSuite(source_name, suite)
+        return 0

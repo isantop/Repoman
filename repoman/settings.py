@@ -31,8 +31,6 @@ _ = gettext.gettext
 class Settings(Gtk.Box):
 
 
-
-
     def __init__(self, parent):
         Gtk.Box.__init__(self, False, 0)
 
@@ -42,9 +40,6 @@ class Settings(Gtk.Box):
         self.handlers = {}
 
         self.parent = parent
-
-        self.source_check = Gtk.CheckButton(label=_("Include source code"))
-        self.proposed_check = Gtk.CheckButton()
 
         settings_grid = Gtk.Grid()
         settings_grid.set_margin_left(12)
@@ -65,33 +60,93 @@ class Settings(Gtk.Box):
         sources_label.set_halign(Gtk.Align.START)
         settings_grid.attach(sources_label, 0, 1, 1, 1)
 
-        self.checks_grid = Gtk.VBox()
-        self.checks_grid.set_margin_left(12)
+        self.checks_grid = Gtk.Grid()
+        self.checks_grid.set_margin_left(36)
         self.checks_grid.set_margin_top(24)
-        self.checks_grid.set_margin_right(12)
-        self.checks_grid.set_margin_bottom(12)
+        self.checks_grid.set_margin_right(36)
+        self.checks_grid.set_margin_bottom(24)
+        self.checks_grid.set_column_spacing(12)
+        self.checks_grid.set_halign(Gtk.Align.FILL)
+        self.checks_grid.set_hexpand(True)
         settings_grid.attach(self.checks_grid, 0, 2, 1, 1)
+
+        self.main_label = Gtk.Label('Officially supported software (main)')
+        self.main_label.set_halign(Gtk.Align.START)
+        self.universe_label = Gtk.Label(_('Community-maintained software (universe)'))
+        self.universe_label.set_halign(Gtk.Align.START)
+        self.restricted_label = Gtk.Label(_('Proprietary drivers for devices (restricted)'))
+        self.restricted_label.set_halign(Gtk.Align.START)
+        self.multiverse_label = Gtk.Label(_('Software with Copyright or legal restrictions (multiverse)'))
+        self.multiverse_label.set_halign(Gtk.Align.START)
+        self.checks_grid.attach(self.main_label, 0, 0, 1, 1)
+        self.checks_grid.attach(self.universe_label, 0, 1, 1, 1)
+        self.checks_grid.attach(self.restricted_label, 0, 2, 1, 1)
+        self.checks_grid.attach(self.multiverse_label, 0, 3, 1, 1)
+
+        self.main_switch = Gtk.Switch()
+        self.main_switch.set_halign(Gtk.Align.END)
+        self.main_switch.set_hexpand(True)
+        self.universe_switch = Gtk.Switch()
+        self.universe_switch.set_halign(Gtk.Align.END)
+        self.restricted_switch = Gtk.Switch()
+        self.restricted_switch.set_halign(Gtk.Align.END)
+        self.multiverse_switch = Gtk.Switch()
+        self.multiverse_switch.set_halign(Gtk.Align.END)
+
+
+        self.checks_grid.attach(self.main_switch, 1, 0, 1, 1)
+        self.checks_grid.attach(self.universe_switch, 1, 1, 1, 1)
+        self.checks_grid.attach(self.restricted_switch, 1, 2, 1, 1)
+        self.checks_grid.attach(self.multiverse_switch, 1, 3, 1, 1)
 
         developer_options = Gtk.Expander()
         developer_options.set_label(_("Developer Options (Advanced)"))
         settings_grid.attach(developer_options, 0, 3, 1, 1)
 
-        self.developer_grid = Gtk.VBox()
-        self.developer_grid.set_margin_left(12)
-        self.developer_grid.set_margin_top(12)
-        self.developer_grid.set_margin_right(12)
-        self.developer_grid.set_margin_bottom(12)
-        developer_options.add(self.developer_grid)
+        self.developer_box = Gtk.VBox()
+        self.developer_box.set_margin_left(36)
+        self.developer_box.set_margin_top(12)
+        self.developer_box.set_margin_right(36)
+        self.developer_box.set_margin_bottom(12)
+
+        self.developer_grid = Gtk.Grid()
+        self.developer_grid.set_column_spacing(12)
+        self.developer_grid.set_halign(Gtk.Align.FILL)
 
         developer_label = Gtk.Label(_("These options are those which are primarily of interest to developers."))
+        developer_label.set_halign(Gtk.Align.START)
         developer_label.set_line_wrap(True)
         developer_label.set_margin_bottom(12)
-        self.developer_grid.add(developer_label)
-        self.developer_grid.add(self.source_check)
-        self.developer_grid.add(self.proposed_check)
+        self.developer_box.add(developer_label)
+        self.developer_box.add(self.developer_grid)
+
+        self.source_check = Gtk.CheckButton(label=_('Include Source Code'))
+        self.source_check.set_halign(Gtk.Align.START)
+        # source_label = Gtk.Label(_('Include Source Code'))
+        # source_label.set_halign(Gtk.Align.START)
+        # source_label.connect('clicked', self.on_source_label_clicked)
+        proposed_label = Gtk.Label(_('Unstable Updates (proposed)'))
+        proposed_label.set_halign(Gtk.Align.START)
+        proposed_label.set_hexpand(True)
+        self.proposed_switch = Gtk.Switch()
+        self.proposed_switch.set_halign(Gtk.Align.END)
+        self.proposed_switch.set_hexpand(True)
+
+
+        developer_options.add(self.developer_box)
+
+        self.developer_grid.attach(self.source_check, 0, 1, 2, 1)
+        self.developer_grid.attach(proposed_label, 0, 2, 1, 1)
+        self.developer_grid.attach(self.proposed_switch, 1, 2, 1, 1)
 
         #self.init_distro()
         #self.show_distro()
+    
+    def on_source_label_clicked(self, widget):
+        if self.source_check.get_active:
+            self.source_check.set_active(False)
+        else:
+            self.source_check.set_active(True)
 
     # def block_handlers(self):
     #     for widget in self.handlers:

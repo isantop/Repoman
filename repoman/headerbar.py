@@ -22,14 +22,14 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from .ppa import PPA
+# from .ppa import PPA
 
 class Headerbar(Gtk.HeaderBar):
 
     ppa_name = False
 
     def __init__(self, parent):
-        self.ppa = PPA(self)
+        # self.ppa = PPA(self)
 
         Gtk.HeaderBar.__init__(self)
         self.parent = parent

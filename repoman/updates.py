@@ -23,7 +23,7 @@ import logging
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from .ppa import PPA
+# from .ppa import PPA
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -43,8 +43,9 @@ class Updates(Gtk.Box):
 
         self.parent = parent
 
-        self.ppa = PPA(self)
-        self.os_name = self.ppa.get_os_name()
+        # self.ppa = PPA(self)
+        # self.os_name = self.ppa.get_os_name()
+        self.os_name = "TESTING"
         self.handlers = {}
 
         updates_grid = Gtk.Grid()
@@ -105,8 +106,8 @@ class Updates(Gtk.Box):
         version_check = Gtk.CheckButton.new_with_label(_("Notify about new versions of %s") % self.os_name)
         self.noti_grid.attach(version_check, 0, 2, 1, 1)
 
-        self.init_updates()
-        self.show_updates()
+        #self.init_updates()
+        #self.show_updates()
 
     def block_handlers(self):
         for widget in self.handlers:
@@ -124,42 +125,42 @@ class Updates(Gtk.Box):
         for checkbutton in self.checks_grid.get_children():
             self.checks_grid.remove(checkbutton)
 
-        comp_children = self.ppa.get_distro_child_repos()
+        # comp_children = self.ppa.get_distro_child_repos()
 
-        for template in comp_children:
-            # Do not show -proposed or source entries here
-            if template.type == "deb-src":
-                continue
-            if "proposed" in template.name:
-                continue
+        # for template in comp_children:
+        #     # Do not show -proposed or source entries here
+        #     if template.type == "deb-src":
+        #         continue
+        #     if "proposed" in template.name:
+        #         continue
 
-            if template.description == "Unsupported Updates":
-                description = _("Backported Updates")
-            else:
-                description = template.description
+        #     if template.description == "Unsupported Updates":
+        #         description = _("Backported Updates")
+        #     else:
+        #         description = template.description
 
-            checkbox = Gtk.CheckButton(label="%s (%s)" % (description,
-                                                          template.name))
-            checkbox.template = template
-            self.handlers[checkbox] = checkbox.connect("toggled",
-                                                       self.on_child_toggled,
-                                                       template)
-            self.checks_grid.add(checkbox)
-            checkbox.show()
-        return 0
+        #     checkbox = Gtk.CheckButton(label="%s (%s)" % (description,
+        #                                                   template.name))
+        #     checkbox.template = template
+        #     self.handlers[checkbox] = checkbox.connect("toggled",
+        #                                                self.on_child_toggled,
+        #                                                template)
+        #     self.checks_grid.add(checkbox)
+        #     checkbox.show()
+        # return 0
 
     def show_updates(self):
-        self.block_handlers()
+        # self.block_handlers()
         self.log.debug("show updates")
 
-        for checkbox in self.checks_grid.get_children():
-            (active, inconsistent) = self.ppa.get_child_download_state(checkbox.template)
-            checkbox.set_active(active)
-            checkbox.set_inconsistent(inconsistent)
-        self.unblock_handlers()
+        # for checkbox in self.checks_grid.get_children():
+        #     # (active, inconsistent) = self.ppa.get_child_download_state(checkbox.template)
+        #     checkbox.set_active(active)
+        #     checkbox.set_inconsistent(inconsistent)
+        # self.unblock_handlers()
         return 0
 
-    def on_child_toggled(self, checkbutton, child):
-        enabled = checkbutton.get_active()
-        self.ppa.set_child_enabled(child, enabled)
+    # def on_child_toggled(self, checkbutton, child):
+    #     enabled = checkbutton.get_active()
+    #     self.ppa.set_child_enabled(child, enabled)
 

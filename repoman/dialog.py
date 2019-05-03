@@ -23,7 +23,6 @@ import logging
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from .ppa import PPA
 import gettext
 
 FLATPAK_SUPPORT = False
@@ -208,34 +207,83 @@ class AddDialog(Gtk.Dialog):
         self.log.addHandler(handler)
         self.log.setLevel(logging.WARNING)
 
-        self.ppa = PPA(parent)
+        # self.ppa = PPA(parent)
+
+        content_area = self.get_content_area()
 
         content_area = self.get_content_area()
 
         content_grid = Gtk.Grid()
         content_grid.set_margin_top(24)
-        content_grid.set_margin_left(12)
-        content_grid.set_margin_right(12)
-        content_grid.set_margin_bottom(12)
-        content_grid.set_row_spacing(6)
+        content_grid.set_margin_left(36)
+        content_grid.set_margin_right(36)
+        content_grid.set_margin_bottom(24)
+        content_grid.set_column_spacing(12)
+        content_grid.set_row_spacing(12)
         content_grid.set_halign(Gtk.Align.CENTER)
-        content_grid.set_hexpand(True)
         content_area.add(content_grid)
 
-        add_title = Gtk.Label(_("Enter Source Line"))
-        Gtk.StyleContext.add_class(add_title.get_style_context(), "h2")
-        content_grid.attach(add_title, 0, 0, 1, 1)
-
-        add_label = Gtk.Label(_("e.g. ppa:mirkobrombin/ppa"))
-        content_grid.attach(add_label, 0, 1, 1, 1)
+        add_label = Gtk.Label(_('Enter a repository line:'))
+        content_grid.attach(add_label, 0, 1, 2, 1)
 
         self.ppa_entry = Gtk.Entry()
-        self.ppa_entry.set_placeholder_text(_("Source Line"))
+        self.ppa_entry.set_placeholder_text(_('ppa:system76/pop'))
+        self.ppa_entry.set_halign(Gtk.Align.CENTER)
         self.ppa_entry.set_activates_default(True)
-        self.ppa_entry.connect(_("changed"), self.on_entry_changed)
         self.ppa_entry.set_width_chars(50)
-        self.ppa_entry.set_margin_top(12)
-        content_grid.attach(self.ppa_entry, 0, 2, 1, 1)
+        self.ppa_entry.connect(_("changed"), self.on_bottom_entry_changed)
+        content_grid.attach(self.ppa_entry, 0, 2, 2, 1)
+
+        full_label = Gtk.Label(_('Or, enter repository details below:'))
+        full_label.set_margin_top(36)
+        content_grid.attach(full_label, 0, 3, 2, 1)
+
+        name_label = Gtk.Label(_("Name:"))
+        name_label.set_halign(Gtk.Align.END)
+        # source_label = Gtk.Label(_('Include Source Code:'))
+        # source_label.set_halign(Gtk.Align.END)
+        uri_label = Gtk.Label(_("URI:"))
+        uri_label.set_halign(Gtk.Align.END)
+        version_label = Gtk.Label(_("Version:"))
+        version_label.set_halign(Gtk.Align.END)
+        component_label = Gtk.Label(_("Component:"))
+        component_label.set_halign(Gtk.Align.END)
+        content_grid.attach(name_label, 0, 4, 1, 1)
+        # content_grid.attach(source_label, 0, 8, 1, 1)
+        content_grid.attach(uri_label, 0, 5, 1, 1)
+        content_grid.attach(version_label, 0, 6, 1, 1)
+        content_grid.attach(component_label, 0, 7, 1, 1)
+
+        self.name_entry = Gtk.Entry()
+        self.name_entry.set_placeholder_text('PPA...')
+        self.name_entry.set_activates_default(False)
+        self.name_entry.set_width_chars(40)
+        self.name_entry.connect(_("changed"), self.on_top_entry_changed)
+        content_grid.attach(self.name_entry, 1, 4, 1, 1)
+
+        self.source_switch = Gtk.CheckButton(_('Include Source Code'))
+        self.source_switch.set_active(False)
+        self.source_switch.set_halign(Gtk.Align.CENTER)
+        content_grid.attach(self.source_switch, 0, 8, 2, 1)
+
+        self.uri_entry = Gtk.Entry()
+        self.uri_entry.set_placeholder_text("https://ppa.launchpad.net/...")
+        self.uri_entry.set_activates_default(False)
+        self.uri_entry.set_width_chars(40)
+        self.uri_entry.connect(_("changed"), self.on_top_entry_changed)
+        content_grid.attach(self.uri_entry, 1, 5, 1, 1)
+
+        self.version_entry = Gtk.Entry()
+        self.version_entry.set_placeholder_text("artful")
+        self.version_entry.set_activates_default(False)
+        self.version_entry.connect(_("changed"), self.on_top_entry_changed)
+        content_grid.attach(self.version_entry, 1, 6, 1, 1)
+
+        self.component_entry = Gtk.Entry()
+        self.component_entry.set_placeholder_text("main")
+        self.component_entry.set_activates_default(False)
+        self.component_entry.connect(_("changed"), self.on_top_entry_changed)
+        content_grid.attach(self.component_entry, 1, 7, 1, 1)
 
         self.add_button = self.get_widget_for_response(Gtk.ResponseType.OK)
         self.add_button.set_sensitive(False)
@@ -246,13 +294,42 @@ class AddDialog(Gtk.Dialog):
 
         self.show_all()
 
-    def on_entry_changed(self, widget):
-        entry_text = widget.get_text()
-        entry_valid = self.ppa.validate(entry_text)
-        try:
-            self.add_button.set_sensitive(entry_valid)
-        except TypeError:
-            pass
+    def on_top_entry_changed(self, widget):
+        all_text = self.name_entry.get_text()
+        all_text += self.uri_entry.get_text()
+        all_text += self.version_entry.get_text()
+        all_text += self.component_entry.get_text()
+
+        if all_text == '' or all_text == None:
+            self.name_entry.set_sensitive(True)
+            self.uri_entry.set_sensitive(True)
+            self.version_entry.set_sensitive(True)
+            self.component_entry.set_sensitive(True)
+            self.source_switch.set_sensitive(True)
+            self.ppa_entry.set_sensitive(True)
+        else:
+            self.name_entry.set_sensitive(True)
+            self.uri_entry.set_sensitive(True)
+            self.version_entry.set_sensitive(True)
+            self.component_entry.set_sensitive(True)
+            self.source_switch.set_sensitive(True)
+            self.ppa_entry.set_sensitive(False)
+    
+    def on_bottom_entry_changed(self, widget):
+        if widget.get_text() == '' or widget.get_text() == None:
+            self.name_entry.set_sensitive(True)
+            self.uri_entry.set_sensitive(True)
+            self.version_entry.set_sensitive(True)
+            self.component_entry.set_sensitive(True)
+            self.source_switch.set_sensitive(True)
+            self.ppa_entry.set_sensitive(True)
+        else:
+            self.name_entry.set_sensitive(False)
+            self.uri_entry.set_sensitive(False)
+            self.version_entry.set_sensitive(False)
+            self.component_entry.set_sensitive(False)
+            self.source_switch.set_sensitive(False)
+            self.ppa_entry.set_sensitive(True)
 
 class FpAddDialog(Gtk.Dialog):
 
@@ -329,15 +406,10 @@ class EditDialog(Gtk.Dialog):
 
     def __init__(self,
                  parent,
-                 repo_disabled,
-                 repo_type,
-                 repo_uri,
-                 repo_version,
-                 repo_component,
-                 repo_archs,
-                 repo_whole):
-
-        self.repo_whole = repo_whole
+                 repo_disabled=False,
+                 repo_uri='http://example.com/',
+                 repo_version='disco',
+                 repo_component='main'):
 
         settings = Gtk.Settings.get_default()
         header = settings.props.gtk_dialogs_use_header
@@ -354,7 +426,7 @@ class EditDialog(Gtk.Dialog):
         self.log.addHandler(handler)
         self.log.setLevel(logging.WARNING)
 
-        self.ppa = PPA(self)
+        # self.ppa = PPA(self)
         self.parent = parent
 
         self.props.resizable = False
@@ -371,51 +443,58 @@ class EditDialog(Gtk.Dialog):
         content_grid.set_halign(Gtk.Align.CENTER)
         content_area.add(content_grid)
 
-        type_label = Gtk.Label(_("Type:"))
-        type_label.set_halign(Gtk.Align.END)
+        name_label = Gtk.Label(_("Name:"))
+        name_label.set_halign(Gtk.Align.END)
         uri_label = Gtk.Label(_("URI:"))
         uri_label.set_halign(Gtk.Align.END)
         version_label = Gtk.Label(_("Version:"))
         version_label.set_halign(Gtk.Align.END)
         component_label = Gtk.Label(_("Component:"))
         component_label.set_halign(Gtk.Align.END)
-        enabled_label = Gtk.Label(_("Enabled:"))
-        enabled_label.set_halign(Gtk.Align.END)
-        content_grid.attach(type_label, 0, 0, 1, 1)
-        content_grid.attach(uri_label, 0, 1, 1, 1)
-        content_grid.attach(version_label, 0, 2, 1, 1)
-        content_grid.attach(component_label, 0, 3, 1, 1)
-        content_grid.attach(enabled_label, 0, 4, 1, 1)
+        content_grid.attach(name_label, 0, 1, 1, 1)
+        content_grid.attach(uri_label, 0, 2, 1, 1)
+        content_grid.attach(version_label, 0, 3, 1, 1)
+        content_grid.attach(component_label, 0, 4, 1, 1)
 
-        self.type_box = Gtk.ComboBoxText()
-        self.type_box.append("deb", _("Binary"))
-        self.type_box.append("deb-src", _("Source code"))
-        self.type_box.set_active_id(repo_type)
-        content_grid.attach(self.type_box, 1, 0, 1, 1)
+        enabled_grid = Gtk.Grid()
+        enabled_grid.set_column_spacing(12)
+        enabled_grid.set_halign(Gtk.Align.CENTER)
+
+        enabled_label = Gtk.Label(_('Enabled'))
+        enabled_label.set_halign(Gtk.Align.END)
+        enabled_grid.attach(enabled_label, 0, 0, 1, 1)
+
+        self.enabled_switch = Gtk.Switch()
+        self.enabled_switch.set_active(True)
+        self.enabled_switch.set_halign(Gtk.Align.END)
+        enabled_grid.attach(self.enabled_switch, 1, 0, 1, 1)
+        content_grid.attach(enabled_grid, 0, 0, 2, 1)
+
+        self.name_entry = Gtk.Entry()
+        self.name_entry.set_placeholder_text("PPA...")
+        self.name_entry.set_activates_default(False)
+        self.name_entry.set_width_chars(40)
+        content_grid.attach(self.name_entry, 1, 1, 1, 1)
 
         self.uri_entry = Gtk.Entry()
         self.uri_entry.set_placeholder_text("https://ppa.launchpad.net/...")
-        self.uri_entry.set_text(repo_uri)
         self.uri_entry.set_activates_default(False)
-        self.uri_entry.set_width_chars(40)
-        content_grid.attach(self.uri_entry, 1, 1, 1, 1)
+        content_grid.attach(self.uri_entry, 1, 2, 1, 1)
 
         self.version_entry = Gtk.Entry()
         self.version_entry.set_placeholder_text("artful")
-        self.version_entry.set_text(repo_version)
         self.version_entry.set_activates_default(False)
-        content_grid.attach(self.version_entry, 1, 2, 1, 1)
+        content_grid.attach(self.version_entry, 1, 3, 1, 1)
 
         self.component_entry = Gtk.Entry()
         self.component_entry.set_placeholder_text("main")
-        self.component_entry.set_text(repo_component[0])
         self.component_entry.set_activates_default(False)
-        content_grid.attach(self.component_entry, 1, 3, 1, 1)
+        content_grid.attach(self.component_entry, 1, 4, 1, 1)
 
-        self.enabled_switch = Gtk.Switch()
-        self.enabled_switch.set_halign(Gtk.Align.START)
-        self.enabled_switch.set_active(not repo_disabled)
-        content_grid.attach(self.enabled_switch, 1, 4, 1, 1)
+        self.source_check = Gtk.CheckButton(_('Include Source Code'))
+        self.source_check.set_halign(Gtk.Align.CENTER)
+        self.source_check.set_active(not repo_disabled)
+        content_grid.attach(self.source_check, 0, 5, 2, 1)
 
 
         remove_button = Gtk.Button.new_with_label(_("Remove Source"))
@@ -458,7 +537,7 @@ class EditDialog(Gtk.Dialog):
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
-            self.ppa.remove(self.repo_whole)
+            # self.ppa.remove(self.repo_whole)
             dialog.destroy()
             self.destroy()
         else:

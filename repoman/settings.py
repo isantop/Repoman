@@ -22,7 +22,7 @@
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from .ppa import PPA
+# from .ppa import PPA
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -36,8 +36,9 @@ class Settings(Gtk.Box):
     def __init__(self, parent):
         Gtk.Box.__init__(self, False, 0)
 
-        self.ppa = PPA(self)
-        self.os_name = self.ppa.get_os_name()
+        # self.ppa = PPA(self)
+        # self.os_name = self.ppa.get_os_name()
+        self.os_name = "TESTING"
         self.handlers = {}
 
         self.parent = parent
@@ -89,96 +90,96 @@ class Settings(Gtk.Box):
         self.developer_grid.add(self.source_check)
         self.developer_grid.add(self.proposed_check)
 
-        self.init_distro()
-        self.show_distro()
+        #self.init_distro()
+        #self.show_distro()
 
-    def block_handlers(self):
-        for widget in self.handlers:
-            if widget.handler_is_connected(self.handlers[widget]):
-                widget.handler_block(self.handlers[widget])
+    # def block_handlers(self):
+    #     for widget in self.handlers:
+    #         if widget.handler_is_connected(self.handlers[widget]):
+    #             widget.handler_block(self.handlers[widget])
 
-    def unblock_handlers(self):
-        for widget in self.handlers:
-            if widget.handler_is_connected(self.handlers[widget]):
-                widget.handler_unblock(self.handlers[widget])
+    # def unblock_handlers(self):
+    #     for widget in self.handlers:
+    #         if widget.handler_is_connected(self.handlers[widget]):
+    #             widget.handler_unblock(self.handlers[widget])
 
-    def init_distro(self):
+    # def init_distro(self):
 
-        self.handlers[self.source_check] = \
-                              self.source_check.connect("toggled",
-                                                                   self.on_source_check_toggled)
+    #     self.handlers[self.source_check] = \
+    #                           self.source_check.connect("toggled",
+    #                                                                self.on_source_check_toggled)
 
-        for checkbutton in self.checks_grid.get_children():
-            self.checks_grid.remove(checkbutton)
+    #     for checkbutton in self.checks_grid.get_children():
+    #         self.checks_grid.remove(checkbutton)
 
-        distro_comps = self.ppa.get_distro_sources()
+        # distro_comps = self.ppa.get_distro_sources()
 
-        for comp in distro_comps:
-            description = comp.description
-            if description == 'Non-free drivers':
-                description = _("Proprietary Drivers for Devices")
-            elif description == 'Restricted software':
-                description = _("Software with Copyright or Legal Restrictions")
-            else:
-                description = description + " software"
+        # for comp in distro_comps:
+        #     description = comp.description
+        #     if description == 'Non-free drivers':
+        #         description = _("Proprietary Drivers for Devices")
+        #     elif description == 'Restricted software':
+        #         description = _("Software with Copyright or Legal Restrictions")
+        #     else:
+        #         description = description + " software"
 
-            label = "%s (%s)" % (description, comp.name)
-            checkbox = Gtk.CheckButton(label=label)
+        #     label = "%s (%s)" % (description, comp.name)
+        #     checkbox = Gtk.CheckButton(label=label)
 
-            checkbox.comp = comp
-            self.handlers[checkbox] = checkbox.connect("toggled",
-                                                       self.on_component_toggled,
-                                                       comp.name)
+        #     checkbox.comp = comp
+        #     self.handlers[checkbox] = checkbox.connect("toggled",
+        #                                                self.on_component_toggled,
+        #                                                comp.name)
 
-            self.checks_grid.add(checkbox)
-            checkbox.show()
+        #     self.checks_grid.add(checkbox)
+        #     checkbox.show()
 
-        child_repos = self.ppa.get_distro_child_repos()
-        for template in child_repos:
-            if template.type == "deb-src":
-                continue
+        # child_repos = self.ppa.get_distro_child_repos()
+        # for template in child_repos:
+        #     if template.type == "deb-src":
+        #         continue
 
-            if "proposed" in template.name:
-                self.proposed_check.set_label("%s (%s)" % (template.description,
-                                                           template.name))
-                self.proposed_check.template = template
-                self.handlers[self.proposed_check] = self.proposed_check.connect("toggled",
-                                                   self.on_proposed_check_toggled,
-                                                   template)
+        #     if "proposed" in template.name:
+        #         self.proposed_check.set_label("%s (%s)" % (template.description,
+        #                                                    template.name))
+        #         self.proposed_check.template = template
+        #         self.handlers[self.proposed_check] = self.proposed_check.connect("toggled",
+        #                                            self.on_proposed_check_toggled,
+        #                                            template)
 
-        return 0
+        # return 0
 
-    def show_distro(self):
-        self.block_handlers()
+    # def show_distro(self):
+    #     self.block_handlers()
 
-        for checkbox in self.checks_grid.get_children():
-            (active, inconsistent) = self.ppa.get_comp_download_state(checkbox.comp)
-            checkbox.set_active(active)
-            checkbox.set_inconsistent(inconsistent)
+    #     for checkbox in self.checks_grid.get_children():
+    #         (active, inconsistent) = self.ppa.get_comp_download_state(checkbox.comp)
+    #         checkbox.set_active(active)
+    #         checkbox.set_inconsistent(inconsistent)
 
-        (src_active, src_inconsistent) = self.ppa.get_source_code_enabled()
-        self.source_check.set_active(src_active)
-        self.source_check.set_inconsistent(src_inconsistent)
+    #     (src_active, src_inconsistent) = self.ppa.get_source_code_enabled()
+    #     self.source_check.set_active(src_active)
+    #     self.source_check.set_inconsistent(src_inconsistent)
 
-        (prop_active, prop_inconsistent) = self.ppa.get_child_download_state(self.proposed_check.template)
-        self.proposed_check.set_active(prop_active)
-        self.proposed_check.set_inconsistent(prop_inconsistent)
+    #     (prop_active, prop_inconsistent) = self.ppa.get_child_download_state(self.proposed_check.template)
+    #     self.proposed_check.set_active(prop_active)
+    #     self.proposed_check.set_inconsistent(prop_inconsistent)
 
-        self.unblock_handlers()
-        return 0
+    #     self.unblock_handlers()
+    #     return 0
 
-    def on_component_toggled(self, checkbutton, comp):
-        enabled = checkbutton.get_active()
-        self.ppa.set_comp_enabled(comp, enabled)
-        return 0
+    # def on_component_toggled(self, checkbutton, comp):
+    #     enabled = checkbutton.get_active()
+    #     self.ppa.set_comp_enabled(comp, enabled)
+    #     return 0
 
-    def on_source_check_toggled(self, checkbutton):
-        enabled = checkbutton.get_active()
-        self.ppa.set_source_code_enabled(enabled)
-        return 0
+    # def on_source_check_toggled(self, checkbutton):
+    #     enabled = checkbutton.get_active()
+    #     self.ppa.set_source_code_enabled(enabled)
+    #     return 0
 
-    def on_proposed_check_toggled(self, checkbutton, comp):
-        enabled = checkbutton.get_active()
-        self.ppa.set_child_enabled(comp, enabled)
-        return 0
+    # def on_proposed_check_toggled(self, checkbutton, comp):
+    #     enabled = checkbutton.get_active()
+    #     self.ppa.set_child_enabled(comp, enabled)
+    #     return 0
     

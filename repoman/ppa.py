@@ -25,8 +25,10 @@ import logging
 import sys
 import threading, queue, time
 
-from softwareproperties.SoftwareProperties import SoftwareProperties
-from aptsources.sourceslist import SourceEntry
+# from softwareproperties.SoftwareProperties import SoftwareProperties
+# from aptsources.sourceslist import SourceEntry
+
+import repolib
 
 import gi
 gi.require_version('Gtk', '3.0')
@@ -34,20 +36,22 @@ from gi.repository import GObject, GLib
 
 GLib.threads_init()
 
+SOURCES_DIR = '/etc/apt/sources.list.d'
+
 bus = dbus.SystemBus()
-remote_object = bus.get_object(
-    'ro.santopiet.repoman', '/PPAObject'
-)
+# remote_object = bus.get_object(
+#     'ro.santopiet.repoman', '/PPAObject'
+# )
 
 class RemoveThread(threading.Thread):
-    cache = apt.Cache()
+    # cache = apt.Cache()
 
-    def __init__(self, parent, sources_path, ppa, sp):
+    def __init__(self, parent, sources_path, ppa):
         threading.Thread.__init__(self)
         self.parent = parent
         self.sources_path = sources_path
         self.ppa = ppa
-        self.sp = sp
+        # self.sp = sp
 
         self.log = logging.getLogger("repoman.PPA.RemoveThread")
         handler = logging.StreamHandler()
@@ -58,16 +62,16 @@ class RemoveThread(threading.Thread):
 
     def run(self):
         self.log.info( "Removing PPA %s" % (self.ppa) )
-        try:
-            remote_object.DelPPA(self.ppa)
-        except:
-            self.exc = sys.exc_info()
-            self.throw_error(self.exc[1])
-        self.sp.reload_sourceslist()
-        isv_list = self.sp.get_isv_sources()
+        # try:
+        #     remote_object.DelPPA(self.ppa)
+        # except:
+        #     self.exc = sys.exc_info()
+        #     self.throw_error(self.exc[1])
+        # self.sp.reload_sourceslist()
+        # isv_list = self.sp.get_isv_sources()
         GObject.idle_add(self.parent.parent.stack.list_all.view.set_sensitive, True)
         GObject.idle_add(self.parent.parent.hbar.spinner.stop)
-        GObject.idle_add(self.parent.parent.stack.list_all.generate_entries, isv_list)
+        # GObject.idle_add(self.parent.parent.stack.list_all.generate_entries, isv_list)
 
     def throw_error(self, message):
         GObject.idle_add(self.parent.parent.stack.list_all.throw_error_dialog,
@@ -76,11 +80,11 @@ class RemoveThread(threading.Thread):
 class AddThread(threading.Thread):
     cache = apt.Cache()
 
-    def __init__(self, parent, ppa, sp):
+    def __init__(self, parent, ppa):
         threading.Thread.__init__(self)
         self.parent = parent
         self.ppa = ppa
-        self.sp = sp
+        # self.sp = sp
 
         self.log = logging.getLogger("repoman.PPA.AddThread")
         handler = logging.StreamHandler()
@@ -91,14 +95,14 @@ class AddThread(threading.Thread):
 
     def run(self):
         self.log.info("Adding PPA %s" % (self.ppa))
-        try:
-            remote_object.AddPPA(self.ppa)
-        except:
-            self.exc = sys.exc_info()
-            self.throw_error(self.exc[1])
-        self.sp.reload_sourceslist()
-        isv_list = self.sp.get_isv_sources()
-        GObject.idle_add(self.parent.parent.parent.stack.list_all.generate_entries, isv_list)
+        # try:
+        #     remote_object.AddPPA(self.ppa)
+        # except:
+        #     self.exc = sys.exc_info()
+        #     self.throw_error(self.exc[1])
+        # self.sp.reload_sourceslist()
+        # isv_list = self.sp.get_isv_sources()
+        # GObject.idle_add(self.parent.parent.parent.stack.list_all.generate_entries, isv_list)
         GObject.idle_add(self.parent.parent.parent.stack.list_all.view.set_sensitive, True)
         GObject.idle_add(self.parent.parent.parent.hbar.spinner.stop)
 
@@ -109,12 +113,12 @@ class AddThread(threading.Thread):
 class ModifyThread(threading.Thread):
     cache = apt.Cache()
 
-    def __init__(self, parent, old_source, new_source, sp):
+    def __init__(self, parent, old_source, new_source):
         threading.Thread.__init__(self)
         self.parent = parent
         self.old_source = old_source
         self.new_source = new_source
-        self.sp = sp
+        # self.sp = sp
 
         self.log = logging.getLogger("repoman.PPA.ModifyThread")
         handler = logging.StreamHandler()
@@ -127,15 +131,15 @@ class ModifyThread(threading.Thread):
         self.log.debug("Old source: %s" % self.old_source)
         self.log.debug("New source: %s" % self.new_source)
         
-        try:
-            remote_object.ModifyPPA(self.old_source, self.new_source)
-        except:
-            self.exc = sys.exc_info()
-            self.throw_error(self.exc[1])
+        # try:
+        #     remote_object.ModifyPPA(self.old_source, self.new_source)
+        # except:
+        #     self.exc = sys.exc_info()
+        #     self.throw_error(self.exc[1])
         
-        self.sp.reload_sourceslist()
-        isv_list = self.sp.get_isv_sources()
-        GObject.idle_add(self.parent.parent.parent.stack.list_all.generate_entries, isv_list)
+        # self.sp.reload_sourceslist()
+        # isv_list = self.sp.get_isv_sources()
+        # GObject.idle_add(self.parent.parent.parent.stack.list_all.generate_entries, isv_list)
         GObject.idle_add(self.parent.parent.parent.stack.list_all.view.set_sensitive, True)
         GObject.idle_add(self.parent.parent.parent.hbar.spinner.stop)
 
@@ -149,13 +153,13 @@ class PPA:
     invalid = "Not a valid PPA"
     valid = "Valid PPA found"
     sources_path = "/etc/apt/sources.list.d/"
-    cache = apt.Cache()
-    sp = SoftwareProperties()
+    # cache = apt.Cache()
+    # sp = SoftwareProperties()
 
     def __init__(self, parent=None):
         self.parent = parent
 
-        self.log = logging.getLogger("repoman.Updates")
+        self.log = logging.getLogger("repoman.PPA")
         handler = logging.StreamHandler()
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
@@ -164,67 +168,73 @@ class PPA:
 
     # Returns a list of all 3rd-party software sources.
     def get_isv(self):
-        self.sp.reload_sourceslist()
-        list = self.sp.get_isv_sources()
-        return list
+        # self.sp.reload_sourceslist()
+        # list = self.sp.get_isv_sources()
+        # return list
+        print('get_isv() not replimplemented')
 
     # Returns the current distro Components.
     def get_distro_sources(self):
-        components = self.sp.distro.source_template.components
-        return components
+        # components = self.sp.distro.source_template.components
+        # return components
+        print('get_distro_sources() not replimplemented')
 
     # Returns the current child repos (updates)
     def get_distro_child_repos(self):
-        repos = self.sp.distro.source_template.children
-        return repos
+        # repos = self.sp.distro.source_template.children
+        # return repos
+        print('get_distro_child_sources() not replimplemented')
 
     # Get whether a component is enabled or not
     def get_comp_download_state(self, comp):
-        (active, inconsistent) = self.sp.get_comp_download_state(comp)
-        return (active, inconsistent)
+        # (active, inconsistent) = self.sp.get_comp_download_state(comp)
+        # return (active, inconsistent)
+        print('get_comp_download_state() not replimplemented')
 
     # Get whether a child repo is enabled or not
     def get_child_download_state(self, child):
-        (active, inconsistent) = self.sp.get_comp_child_state(child)
-        self.log.debug(child.name + " (" + str(active) + ", " + str(inconsistent) + ")")
-        return (active, inconsistent)
+        # (active, inconsistent) = self.sp.get_comp_child_state(child)
+        # self.log.debug(child.name + " (" + str(active) + ", " + str(inconsistent) + ")")
+        # return (active, inconsistent)
+        print('get_child_download_state() not replimplemented')
 
     # Get Source Code State
     def get_source_code_enabled(self):
-        enabled = self.sp.get_source_code_state()
-        if enabled == None:
-            return(False, True)
-        else:
-            return (enabled, False)
+        # enabled = self.sp.get_source_code_state()
+        # if enabled == None:
+        #     return(False, True)
+        # else:
+        #     return (enabled, False)
+        print('get_source_code_enabled() not replimplemented')
 
     # Enable/Disable a component
     def set_comp_enabled(self, comp, enabled):
         self.log.info('Component: %s\nEnabled: %s' % (comp, enabled))
-        try:
-            remote_object.SetCompEnabled(comp, enabled)
-        except:
-            self.exc = sys.exc_info()
-            self.throw_error(self.exc[1])
+        # try:
+        #     remote_object.SetCompEnabled(comp, enabled)
+        # except:
+        #     self.exc = sys.exc_info()
+        #     self.throw_error(self.exc[1])
         return 0
 
     # Enable/Disable a child repo
     def set_child_enabled(self, child, enabled):
         self.log.info('Child: %s\nEnabled: %s' % (child, enabled))
-        try:
-            remote_object.SetChildEnabled(child.name, enabled)
-        except:
-            self.exc = sys.exc_info()
-            self.throw_error(self.exc[1])
+        # try:
+        #     remote_object.SetChildEnabled(child.name, enabled)
+        # except:
+        #     self.exc = sys.exc_info()
+        #     self.throw_error(self.exc[1])
         return 0
 
     # Enable/Disable source code
     def set_source_code_enabled(self, enabled):
         self.log.info('Source enabled: %s' % enabled)
-        try:
-            remote_object.SetSourceCodeEnabled(enabled)
-        except:
-            self.exc = sys.exc_info()
-            self.throw_error(self.exc[1])
+        # try:
+        #     remote_object.SetSourceCodeEnabled(enabled)
+        # except:
+        #     self.exc = sys.exc_info()
+        #     self.throw_error(self.exc[1])
         return 0
 
     def get_line(self, isdisabled, rtype, archs, uri, version, component):
@@ -248,8 +258,9 @@ class PPA:
     # Turn an added deb line into an apt source
     def deb_line_to_source(self, line):
         self.log.info(line)
-        source = self.sp._find_source_from_string(line)
-        return source
+        # source = self.sp._find_source_from_string(line)
+        # return source
+        print('deb_line_to_source() not replimplemented')
 
     # Modify an existing PPA
     def modify_ppa(self, old_source, disabled, rtype, archs, uri, version, component):
@@ -258,7 +269,7 @@ class PPA:
         self.log.info("New source: %s" % line)
         self.parent.parent.parent.hbar.spinner.start()
         self.parent.parent.parent.stack.list_all.view.set_sensitive(False)
-        ModifyThread(self.parent, old_source, line, self.sp).start()
+        ModifyThread(self.parent, old_source, line).start()
 
 
     # Starts a new thread to add a repository
@@ -267,7 +278,7 @@ class PPA:
         print(type(url))
         self.parent.parent.parent.hbar.spinner.start()
         self.parent.parent.parent.stack.list_all.view.set_sensitive(False)
-        t = AddThread(self.parent, url, self.sp)
+        t = AddThread(self.parent, url)
         t.start()
 
     # Starts a new thread to remove a repository
@@ -275,7 +286,7 @@ class PPA:
         self.log.info("Removing source: %s" % ppa)
         self.parent.parent.hbar.spinner.start()
         self.parent.parent.stack.list_all.view.set_sensitive(False)
-        RemoveThread(self.parent, self.sources_path, ppa, self.sp).start()
+        RemoveThread(self.parent, self.sources_path, ppa).start()
 
     # Validate if a line appears to be a valid apt line or ppa.
     def validate(self, line):

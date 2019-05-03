@@ -23,8 +23,6 @@ import gi
 import logging
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from softwareproperties.SoftwareProperties import SoftwareProperties
-from .ppa import PPA
 from .dialog import AddDialog, EditDialog
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
@@ -37,10 +35,10 @@ class List(Gtk.Box):
     ppa_name = False
 
     def __init__(self, parent):
-        self.sp = SoftwareProperties()
+        # self.sp = SoftwareProperties()
         Gtk.Box.__init__(self, False, 0)
         self.parent = parent
-        self.ppa = PPA(self)
+        # self.ppa = PPA(self)
 
         self.settings = Gtk.Settings()
 
@@ -114,15 +112,18 @@ class List(Gtk.Box):
         action_bar.insert(add_button, 0)
         list_grid.attach(action_bar, 0, 1, 1, 1)
 
-        self.generate_entries(self.ppa.get_isv())
+        #self.generate_entries(self.ppa.get_isv())
 
     def on_edit_button_clicked(self, widget):
-        selec = self.view.get_selection()
-        (model, pathlist) = selec.get_selected_rows()
-        tree_iter = model.get_iter(pathlist[0])
-        value = model.get_value(tree_iter, 1)
-        self.log.info("PPA to edit: %s" % value)
-        self.do_edit(value)
+        dialog = EditDialog(self.parent.parent)
+        response = dialog.run()
+
+        if response == Gtk.ResponseType.OK:
+            # url = dialog.ppa_entry.get_text()
+            dialog.destroy()
+            # self.ppa.add(url)
+        else:
+            dialog.destroy()
 
     def on_row_activated(self, widget, data1, data2):
         tree_iter = self.ppa_liststore.get_iter(data1)
@@ -131,51 +132,7 @@ class List(Gtk.Box):
         self.do_edit(value)
 
     def do_edit(self, repo):
-        source = self.ppa.deb_line_to_source(repo)
-        dialog = EditDialog(self.parent.parent,
-                            source.disabled,
-                            source.type,
-                            source.uri,
-                            source.dist,
-                            source.comps,
-                            source.architectures,
-                            repo)
-        response = dialog.run()
-
-        if response == Gtk.ResponseType.OK:
-            if dialog.type_box.get_active() == 0:
-                new_rtype = "deb"
-            elif dialog.type_box.get_active() == 1:
-                new_rtype = "deb-src"
-            new_disabled = not dialog.enabled_switch.get_active()
-            new_uri = dialog.uri_entry.get_text()
-            self.log.info(new_disabled)
-            new_version = dialog.version_entry.get_text()
-            new_component = dialog.component_entry.get_text()
-            dialog.destroy()
-            new_archs = "[arch="
-            for arch in source.architectures:
-                new_archs = "%s%s," % (new_archs, arch)
-            new_archs = new_archs[:-1] + "]"
-            old_source = self.ppa.get_line(
-                source.disabled,
-                source.type,
-                source.architectures,
-                source.uri,
-                source.dist,
-                source.comps
-            )
-            self.ppa.modify_ppa(old_source,
-                                new_disabled,
-                                new_rtype,
-                                new_archs,
-                                new_uri,
-                                new_version,
-                                new_component)
-            self.generate_entries(self.ppa.get_isv())
-        else:
-            dialog.destroy()
-            self.generate_entries(self.ppa.get_isv())
+        return
 
     def on_add_button_clicked(self, widget):
         #self.ppa.remove(self.ppa_name)
@@ -183,37 +140,37 @@ class List(Gtk.Box):
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
-            url = dialog.ppa_entry.get_text()
+            # url = dialog.ppa_entry.get_text()
             dialog.destroy()
-            self.ppa.add(url)
+            # self.ppa.add(url)
         else:
             dialog.destroy()
 
-    def generate_entries(self, isv_list):
-        self.ppa_liststore.clear()
+    # def generate_entries(self, isv_list):
+    #     self.ppa_liststore.clear()
 
-        self.listiter_count = self.listiter_count + 1
+    #     self.listiter_count = self.listiter_count + 1
 
-        for source in isv_list:
-            if not "cdrom" in str(source):
-                if not str(source).startswith("#"):
-                    source_pretty = self.sp.render_source(source)
-                    if "Partners" in source_pretty:
-                        continue
-                    self.ppa_liststore.insert_with_valuesv(-1,
-                                                           [0, 1],
-                                                           [source_pretty, str(source)])
-        for source in isv_list:
-            if not "cdrom" in str(source):
-                if str(source).startswith("#"):
-                    source_str_list = self.sp.render_source(source).split("b>")
-                    source_pretty = "%s%s <i>Disabled</i>" % (source_str_list[1][:-2],
-                                                              source_str_list[2])
-                    if "Partners" in source_pretty:
-                        continue
-                    self.ppa_liststore.insert_with_valuesv(-1,
-                                                           [0, 1],
-                                                           [source_pretty, str(source)])
+    #     for source in isv_list:
+    #         if not "cdrom" in str(source):
+    #             if not str(source).startswith("#"):
+    #                 # source_pretty = self.sp.render_source(source)
+    #                 # if "Partners" in source_pretty:
+    #                 #     continue
+    #                 # self.ppa_liststore.insert_with_valuesv(-1,
+    #                 #                                        [0, 1],
+    #                 #                                        [source_pretty, str(source)])
+    #     for source in isv_list:
+    #         if not "cdrom" in str(source):
+    #             if str(source).startswith("#"):
+    #                 source_str_list = self.sp.render_source(source).split("b>")
+    #                 source_pretty = "%s%s <i>Disabled</i>" % (source_str_list[1][:-2],
+    #                                                           source_str_list[2])
+    #                 if "Partners" in source_pretty:
+    #                     continue
+    #                 self.ppa_liststore.insert_with_valuesv(-1,
+    #                                                        [0, 1],
+    #                                                        [source_pretty, str(source)])
 
     def on_row_change(self, widget):
         (model, pathlist) = widget.get_selected_rows()

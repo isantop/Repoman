@@ -97,10 +97,16 @@ class Updates(Gtk.Box):
         self.security_switch = Gtk.Switch()
         self.security_switch.set_halign(Gtk.Align.END)
         self.security_switch.set_hexpand(True)
+        self.security_switch.suite_name = '-security'
+        self.security_switch.connect('state-set', self.on_switch_toggled)
         self.updates_switch = Gtk.Switch()
         self.updates_switch.set_halign(Gtk.Align.END)
+        self.updates_switch.suite_name = '-updates'
+        self.updates_switch.connect('state-set', self.on_switch_toggled)
         self.backports_switch = Gtk.Switch()
         self.backports_switch.set_halign(Gtk.Align.END)
+        self.backports_switch.suite_name = '-backports'
+        self.backports_switch.connect('state-set', self.on_switch_toggled)
 
         self.checks_grid.attach(self.security_switch, 1, 0, 1, 1)
         self.checks_grid.attach(self.updates_switch, 1, 1, 1, 1)
@@ -137,23 +143,38 @@ class Updates(Gtk.Box):
         version_check = Gtk.CheckButton.new_with_label(_("Notify about new versions of %s") % self.os_name)
         self.noti_grid.attach(version_check, 0, 2, 1, 1)
 
+
+        self.suite_switches = {
+            '-security':  self.security_switch,
+            '-updates':   self.updates_switch,
+            '-backports': self.backports_switch
+        }
+
         self.setup_suites()
+    
+    def on_switch_toggled(self, widget, data=None):
+        """
+        Handler for switches.
+        """
+        if not widget.get_active():
+            self.log.debug('Disabling system suite: %s' % widget.suite_name)
+            self.repo.remove_suite_from_source(
+                source_name='system',
+                suite='{}{}'.format(self.codename, widget.suite_name)
+            )
+        else:
+            self.log.debug('Enabling system suite: %s' % widget.suite_name)
+            self.repo.add_suite_to_source(
+                source_name='system',
+                suite='{}{}'.format(self.codename, widget.suite_name)
+            )
     
     def setup_suites(self):
         """
         Sets the initial state of the switches in the window.
         """
-        suite_switches = {
-            '-security':  self.security_switch,
-            '-updates':   self.updates_switch,
-            '-backports': self.backports_switch
-        }
         for i in self.system_suites:
             suite = i.replace(self.codename, '')
             self.log.debug('Got suite: %s' % suite)
-            if suite in suite_switches:
-                suite_switches[suite].set_active(True)
-    
-
-
-
+            if suite in self.suite_switches:
+                self.suite_switches[suite].set_active(True)

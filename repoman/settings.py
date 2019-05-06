@@ -36,12 +36,9 @@ class Settings(Gtk.Box):
 
     def __init__(self, parent):
         Gtk.Box.__init__(self, False, 0)
-
-        # self.ppa = PPA(self)
-        # self.os_name = self.ppa.get_os_name()
-        self.os_name = "TESTING"
         self.handlers = {}
         self.repo = Repo()
+        self.os_name = self.repo.get_os_name()
         self.parent = parent
         self.log = logging.getLogger('repoman.Settings')
         handler = logging.StreamHandler()

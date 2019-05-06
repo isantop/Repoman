@@ -45,7 +45,7 @@ class Updates(Gtk.Box):
         self.log.debug('Loaded repoman.Updates')
         self.repo = Repo()
         self.parent = parent
-        self.os_name = "TESTING"
+        self.os_name = self.repo.get_os_name()
         self.handlers = {}
         self.codename = self.repo.get_codename()
         self.system_suites = self.repo.get_system_suites()

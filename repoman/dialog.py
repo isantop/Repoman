@@ -207,6 +207,7 @@ class AddDialog(Gtk.Dialog):
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
         self.log.setLevel(logging.WARNING)
+        self.repo = Repo()
 
         # self.ppa = PPA(parent)
 
@@ -275,7 +276,7 @@ class AddDialog(Gtk.Dialog):
         content_grid.attach(self.uri_entry, 1, 5, 1, 1)
 
         self.version_entry = Gtk.Entry()
-        self.version_entry.set_placeholder_text("artful")
+        self.version_entry.set_placeholder_text(self.repo.get_codename())
         self.version_entry.set_activates_default(False)
         self.version_entry.connect(_("changed"), self.on_top_entry_changed)
         content_grid.attach(self.version_entry, 1, 6, 1, 1)
@@ -497,7 +498,7 @@ class EditDialog(Gtk.Dialog):
         content_grid.attach(self.uri_entry, 1, 2, 1, 1)
 
         self.version_entry = Gtk.Entry()
-        self.version_entry.set_placeholder_text("artful")
+        self.version_entry.set_placeholder_text(self.repo.get_codename())
         self.version_entry.set_text(' '.join(self.source.suites))
         self.version_entry.set_activates_default(False)
         content_grid.attach(self.version_entry, 1, 3, 1, 1)

@@ -82,7 +82,7 @@ class List(Gtk.Box):
         self.repo_liststore = Gtk.ListStore(str, str)
         self.view = Gtk.TreeView(self.repo_liststore)
         renderer = Gtk.CellRendererText()
-        column = Gtk.TreeViewColumn(_("Source"), renderer, markup=0)
+        column = Gtk.TreeViewColumn(_("Source"), renderer, markup=1)
         self.view.append_column(column)
         self.view.set_hexpand(True)
         self.view.set_vexpand(True)

@@ -90,6 +90,24 @@ class Repo:
 
         self.system_source.load_from_file()
     
+    def get_os_name(self):
+        try:
+            with open("/etc/os-release") as os_release_file:
+                os_release = os_release_file.readlines()
+                for line in os_release:
+                    parse = line.split('=')
+                    if parse[0] == "NAME":
+                        if parse[1].startswith('"'):
+                            return parse[1][1:-2]
+                        else:
+                            return parse[1][:-1]
+                    else:
+                        continue
+        except FileNotFoundError:
+            return "your OS"
+
+        return "your OS"
+    
     def get_sources(self):
         """
         Gets a list of sources from the disk.
@@ -222,3 +240,7 @@ class Repo:
             ' '.join(source.uris), ' '.join(source.suites), 
             ' '.join(source.components), source.filename
         )
+
+    def throw_error(self, message):
+        GObject.idle_add(self.parent.parent.parent.stack.list_all.throw_error_dialog,
+                         message, "error")

@@ -165,13 +165,14 @@ class PPA:
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
         self.log.setLevel(logging.WARNING)
-
-    # Returns a list of all 3rd-party software sources.
-    def get_isv(self):
-        # self.sp.reload_sourceslist()
-        # list = self.sp.get_isv_sources()
-        # return list
-        print('get_isv() not replimplemented')
+    
+    def get_sources(self):
+        """
+        Gets a list of sources from the disk.
+        """
+        self.log.debug('Doing list')
+        sources = glob.glob('{}/*.sources'.format(SOURCES_DIR))
+        return sources
 
     # Returns the current distro Components.
     def get_distro_sources(self):

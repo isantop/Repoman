@@ -33,6 +33,7 @@ except ImportError:
     FLATPAK_SUPPORT = False
     pass
 
+from .repo import Repo
 
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -406,10 +407,7 @@ class EditDialog(Gtk.Dialog):
 
     def __init__(self,
                  parent,
-                 repo_disabled=False,
-                 repo_uri='http://example.com/',
-                 repo_version='disco',
-                 repo_component='main'):
+                 repo_filename):
 
         settings = Gtk.Settings.get_default()
         header = settings.props.gtk_dialogs_use_header
@@ -425,6 +423,9 @@ class EditDialog(Gtk.Dialog):
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
         self.log.setLevel(logging.WARNING)
+
+        self.repo = Repo()
+        self.source = self.repo.get_source(repo_filename)
 
         # self.ppa = PPA(self)
         self.parent = parent
@@ -465,35 +466,43 @@ class EditDialog(Gtk.Dialog):
         enabled_grid.attach(enabled_label, 0, 0, 1, 1)
 
         self.enabled_switch = Gtk.Switch()
-        self.enabled_switch.set_active(True)
+        self.enabled_switch.set_active(self.source.enabled.get_bool())
         self.enabled_switch.set_halign(Gtk.Align.END)
         enabled_grid.attach(self.enabled_switch, 1, 0, 1, 1)
         content_grid.attach(enabled_grid, 0, 0, 2, 1)
 
         self.name_entry = Gtk.Entry()
         self.name_entry.set_placeholder_text("PPA...")
+        self.name_entry.set_text(self.source.name)
         self.name_entry.set_activates_default(False)
         self.name_entry.set_width_chars(40)
         content_grid.attach(self.name_entry, 1, 1, 1, 1)
 
         self.uri_entry = Gtk.Entry()
         self.uri_entry.set_placeholder_text("https://ppa.launchpad.net/...")
+        self.uri_entry.set_text(' '.join(self.source.uris))
         self.uri_entry.set_activates_default(False)
         content_grid.attach(self.uri_entry, 1, 2, 1, 1)
 
         self.version_entry = Gtk.Entry()
         self.version_entry.set_placeholder_text("artful")
+        self.version_entry.set_text(' '.join(self.source.suites))
         self.version_entry.set_activates_default(False)
         content_grid.attach(self.version_entry, 1, 3, 1, 1)
 
         self.component_entry = Gtk.Entry()
         self.component_entry.set_placeholder_text("main")
+        self.component_entry.set_text(' '.join(self.source.components))
         self.component_entry.set_activates_default(False)
         content_grid.attach(self.component_entry, 1, 4, 1, 1)
 
         self.source_check = Gtk.CheckButton(_('Include Source Code'))
         self.source_check.set_halign(Gtk.Align.CENTER)
-        self.source_check.set_active(not repo_disabled)
+        source_enabled = False
+        for type in self.source.types:
+            if type.value == "deb-src":
+                source_enabled = True
+        self.source_check.set_active(source_enabled)
         content_grid.attach(self.source_check, 0, 5, 2, 1)
 
 

@@ -21,11 +21,12 @@
 
 import apt
 import dbus
+import glob
 import logging
 import sys
 import threading
-import queue
 import time
+import queue
 
 import repolib
 
@@ -57,6 +58,27 @@ class Repo:
         self.system_source = repolib.SystemSource()
 
         self.system_source.load_from_file()
+    
+    def get_sources(self):
+        """
+        Gets a list of sources from the disk.
+        """
+        self.log.debug('Doing list')
+        source_obj = repolib.Source()
+        sources_dict = {}
+        sources = glob.glob('{}/*.sources'.format(SOURCES_DIR))
+        for source in sources:
+            source_obj.load_from_file(source)
+            sources_dict[source] = source_obj.name
+        return sources_dict
+    
+    def get_source(self, file):
+        """
+        Returns a repolib.Source object from filename FILE.
+        """
+        source = repolib.Source()
+        source.load_from_file(filename=file)
+        return source
         
     def get_system_suites(self):
         """

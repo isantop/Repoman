@@ -25,7 +25,6 @@ import dbus.mainloop.glib
 
 import time
 
-
 import repolib
 
 class RepomanException(dbus.DBusException):

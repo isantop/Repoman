@@ -107,18 +107,30 @@ class Settings(Gtk.Box):
         self.main_switch.set_halign(Gtk.Align.END)
         self.main_switch.set_hexpand(True)
         self.main_switch.component_name = 'main'
-        self.main_switch.connect('state-set', self.on_switch_toggled)
+        
         self.universe_switch = Gtk.Switch()
         self.universe_switch.set_halign(Gtk.Align.END)
         self.universe_switch.component_name = 'universe'
-        self.universe_switch.connect('state-set', self.on_switch_toggled)
+        
         self.restricted_switch = Gtk.Switch()
         self.restricted_switch.set_halign(Gtk.Align.END)
         self.restricted_switch.component_name = 'restricted'
-        self.restricted_switch.connect('state-set', self.on_switch_toggled)
+        
         self.multiverse_switch = Gtk.Switch()
         self.multiverse_switch.set_halign(Gtk.Align.END)
         self.multiverse_switch.component_name = 'multiverse'
+        
+        self.component_switches = {
+            'main':       self.main_switch,
+            'universe':   self.universe_switch,
+            'restricted': self.restricted_switch,
+            'multiverse': self.multiverse_switch
+        }
+        self.setup_comps()
+
+        self.main_switch.connect('state-set', self.on_switch_toggled)
+        self.universe_switch.connect('state-set', self.on_switch_toggled)
+        self.restricted_switch.connect('state-set', self.on_switch_toggled)
         self.multiverse_switch.connect('state-set', self.on_switch_toggled)
 
 
@@ -167,16 +179,7 @@ class Settings(Gtk.Box):
         self.developer_grid.attach(self.source_check, 0, 1, 2, 1)
         self.developer_grid.attach(proposed_label, 0, 2, 1, 1)
         self.developer_grid.attach(self.proposed_switch, 1, 2, 1, 1)
-
-        self.component_switches = {
-            'main':       self.main_switch,
-            'universe':   self.universe_switch,
-            'restricted': self.restricted_switch,
-            'multiverse': self.multiverse_switch
-        }
-        #self.init_distro()
-        #self.show_distro()
-        self.setup_comps()
+        
         self.show_all()
     
     def on_source_toggled(self, widget):

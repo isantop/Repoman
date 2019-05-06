@@ -23,7 +23,10 @@ import gi
 import logging
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
+
 from .dialog import AddDialog, EditDialog
+from .repo import Repo
+
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -38,7 +41,7 @@ class List(Gtk.Box):
         # self.sp = SoftwareProperties()
         Gtk.Box.__init__(self, False, 0)
         self.parent = parent
-        # self.ppa = PPA(self)
+        self.repo = Repo()
 
         self.settings = Gtk.Settings()
 
@@ -47,7 +50,7 @@ class List(Gtk.Box):
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
-        self.log.setLevel(logging.WARNING)
+        self.log.setLevel(logging.DEBUG)
 
         self.content_grid = Gtk.Grid()
         self.content_grid.set_margin_top(24)
@@ -76,8 +79,8 @@ class List(Gtk.Box):
         list_window = Gtk.ScrolledWindow()
         list_grid.attach(list_window, 0, 0, 1, 1)
 
-        self.ppa_liststore = Gtk.ListStore(str, str)
-        self.view = Gtk.TreeView(self.ppa_liststore)
+        self.repo_liststore = Gtk.ListStore(str, str)
+        self.view = Gtk.TreeView(self.repo_liststore)
         renderer = Gtk.CellRendererText()
         column = Gtk.TreeViewColumn(_("Source"), renderer, markup=0)
         self.view.append_column(column)
@@ -112,10 +115,29 @@ class List(Gtk.Box):
         action_bar.insert(add_button, 0)
         list_grid.attach(action_bar, 0, 1, 1, 1)
 
-        #self.generate_entries(self.ppa.get_isv())
+        self.generate_entries(self.repo.get_sources())
 
     def on_edit_button_clicked(self, widget):
-        dialog = EditDialog(self.parent.parent)
+        """
+        Edit Button Handler.
+        """
+        tree_selection = self.view.get_selection()
+        (model, pathlist) = tree_selection.get_selected_rows()
+        tree_iter = model.get_iter(pathlist[0])
+        value = model.get_value(tree_iter, 1)
+        self.log.info('PPA to edit: %s', value)
+        self.do_edit(value)
+
+    def on_row_activated(self, widget, data, data2):
+        print("on_row_activated()")
+        tree_iter = self.repo_liststore.get_iter(data)
+        value = self.repo_liststore.get_value(tree_iter, 1)
+        print(value)
+        self.log.info("PPA to edit: %s" % value)
+        self.do_edit(value)
+
+    def do_edit(self, repo):
+        dialog = EditDialog(self.parent.parent, repo)
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
@@ -124,15 +146,6 @@ class List(Gtk.Box):
             # self.ppa.add(url)
         else:
             dialog.destroy()
-
-    def on_row_activated(self, widget, data1, data2):
-        tree_iter = self.ppa_liststore.get_iter(data1)
-        value = self.ppa_liststore.get_value(tree_iter, 1)
-        self.log.info("PPA to edit: %s" % value)
-        self.do_edit(value)
-
-    def do_edit(self, repo):
-        return
 
     def on_add_button_clicked(self, widget):
         #self.ppa.remove(self.ppa_name)
@@ -145,6 +158,23 @@ class List(Gtk.Box):
             # self.ppa.add(url)
         else:
             dialog.destroy()
+    
+    def generate_entries(self, sources):
+        """
+        Add entries to the listview.
+        """
+        self.repo_liststore.clear()
+        
+        for repo in sources:
+            if repo.lower() == "system":
+                continue
+            else:
+                self.repo_liststore.append(
+                    [
+                        sources[repo], repo
+                    ]
+                )
+
 
     # def generate_entries(self, isv_list):
     #     self.ppa_liststore.clear()
@@ -173,11 +203,14 @@ class List(Gtk.Box):
     #                                                        [source_pretty, str(source)])
 
     def on_row_change(self, widget):
+        print("on_row_changed()")
         (model, pathlist) = widget.get_selected_rows()
         for path in pathlist :
             tree_iter = model.get_iter(path)
             value = model.get_value(tree_iter,1)
-            self.ppa_name = value
+            print(value)
+            self.log.debug(value)
+            self.repo_name = value
 
     def throw_error_dialog(self, message, msg_type):
         if msg_type == "error":

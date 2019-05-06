@@ -44,12 +44,9 @@ class Updates(Gtk.Box):
         self.log.setLevel(logging.DEBUG)
         self.log.debug('Loaded repoman.Updates')
         self.repo = Repo()
-
         self.parent = parent
-
         self.os_name = "TESTING"
         self.handlers = {}
-
         self.codename = self.repo.get_codename()
         self.system_suites = self.repo.get_system_suites()
 
@@ -98,14 +95,22 @@ class Updates(Gtk.Box):
         self.security_switch.set_halign(Gtk.Align.END)
         self.security_switch.set_hexpand(True)
         self.security_switch.suite_name = '-security'
-        self.security_switch.connect('state-set', self.on_switch_toggled)
         self.updates_switch = Gtk.Switch()
         self.updates_switch.set_halign(Gtk.Align.END)
         self.updates_switch.suite_name = '-updates'
-        self.updates_switch.connect('state-set', self.on_switch_toggled)
         self.backports_switch = Gtk.Switch()
         self.backports_switch.set_halign(Gtk.Align.END)
         self.backports_switch.suite_name = '-backports'
+        
+        self.suite_switches = {
+            '-security':  self.security_switch,
+            '-updates':   self.updates_switch,
+            '-backports': self.backports_switch
+        }
+        
+        self.setup_suites()
+        self.security_switch.connect('state-set', self.on_switch_toggled)
+        self.updates_switch.connect('state-set', self.on_switch_toggled)
         self.backports_switch.connect('state-set', self.on_switch_toggled)
 
         self.checks_grid.attach(self.security_switch, 1, 0, 1, 1)
@@ -136,21 +141,11 @@ class Updates(Gtk.Box):
         notify_check = Gtk.CheckButton.new_with_label(_("Notify about new updates"))
         self.noti_grid.attach(notify_check, 0, 0, 1, 1)
 
-
         auto_check = Gtk.CheckButton.new_with_label(_("Automatically install important security updates."))
         self.noti_grid.attach(auto_check, 0, 1, 1, 1)
 
         version_check = Gtk.CheckButton.new_with_label(_("Notify about new versions of %s") % self.os_name)
         self.noti_grid.attach(version_check, 0, 2, 1, 1)
-
-
-        self.suite_switches = {
-            '-security':  self.security_switch,
-            '-updates':   self.updates_switch,
-            '-backports': self.backports_switch
-        }
-
-        self.setup_suites()
     
     def on_switch_toggled(self, widget, data=None):
         """

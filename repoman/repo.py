@@ -85,7 +85,7 @@ class Repo:
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
-        self.log.setLevel(logging.DEBUG)
+        self.log.setLevel(logging.WARNING)
         self.system_source = repolib.SystemSource()
 
         self.system_source.load_from_file()
@@ -117,9 +117,25 @@ class Repo:
         sources_dict = {}
         sources = glob.glob('{}/*.sources'.format(SOURCES_DIR))
         for source in sources:
+            suffix = ''
+            markup_open = '<b>'
+            markup_close = '</b>'
+            with open(source) as source_file:
+                for line in source_file:
+                    if 'Enabled: no' in line:
+                        
+                        markup_open = ''
+                        markup_close = ''
+                        suffix = ' <i>Disabled</i>'
             if not source in SYSTEM_SOURCES:
                 source_obj.load_from_file(source)
-                sources_dict[source] = source_obj.name
+                source_name = "{}{}{}{}".format(
+                    markup_open,
+                    source_obj.name,
+                    markup_close,
+                    suffix
+                )
+                sources_dict[source] = source_name
         return sources_dict
     
     def get_source(self, file):
@@ -217,8 +233,6 @@ class Repo:
         privileged_object.SetSource(source_name, is_enabled)
     
     def set_modified_source(self, source):
-        print(source.make_source_string())
-        
         source_code_enabled = False
         for type in source.types:
             if type.value == "deb-src":

@@ -50,7 +50,7 @@ class List(Gtk.Box):
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
-        self.log.setLevel(logging.DEBUG)
+        self.log.setLevel(logging.WARNING)
 
         self.content_grid = Gtk.Grid()
         self.content_grid.set_margin_top(24)
@@ -82,7 +82,7 @@ class List(Gtk.Box):
         self.repo_liststore = Gtk.ListStore(str, str)
         self.view = Gtk.TreeView(self.repo_liststore)
         renderer = Gtk.CellRendererText()
-        column = Gtk.TreeViewColumn(_("Source"), renderer, markup=1)
+        column = Gtk.TreeViewColumn(_("Source"), renderer, markup=0)
         self.view.append_column(column)
         self.view.set_hexpand(True)
         self.view.set_vexpand(True)
@@ -129,10 +129,8 @@ class List(Gtk.Box):
         self.do_edit(value)
 
     def on_row_activated(self, widget, data, data2):
-        print("on_row_activated()")
         tree_iter = self.repo_liststore.get_iter(data)
         value = self.repo_liststore.get_value(tree_iter, 1)
-        print(value)
         self.log.info("PPA to edit: %s" % value)
         self.do_edit(value)
 
@@ -154,7 +152,6 @@ class List(Gtk.Box):
         self.generate_entries(self.repo.get_sources())
 
     def on_add_button_clicked(self, widget):
-        #self.ppa.remove(self.ppa_name)
         dialog = AddDialog(self.parent.parent)
         response = dialog.run()
 
@@ -173,12 +170,19 @@ class List(Gtk.Box):
         self.repo_liststore.clear()
         
         for repo in sources:
-            self.repo_liststore.append(
-                [
-                    sources[repo], repo
-                ]
-            )
-
+            if not 'Disabled' in sources[repo]:
+                self.repo_liststore.append(
+                    [
+                        sources[repo], repo
+                    ]
+                )
+        for repo in sources:
+            if 'Disabled' in sources[repo]:
+                self.repo_liststore.append(
+                    [
+                        sources[repo], repo
+                    ]
+                )
 
     # def generate_entries(self, isv_list):
     #     self.ppa_liststore.clear()
@@ -207,12 +211,10 @@ class List(Gtk.Box):
     #                                                        [source_pretty, str(source)])
 
     def on_row_change(self, widget):
-        print("on_row_changed()")
         (model, pathlist) = widget.get_selected_rows()
         for path in pathlist :
             tree_iter = model.get_iter(path)
             value = model.get_value(tree_iter,1)
-            print(value)
             self.log.debug(value)
             self.repo_name = value
 

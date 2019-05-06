@@ -41,7 +41,7 @@ class Updates(Gtk.Box):
         formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
-        self.log.setLevel(logging.DEBUG)
+        self.log.setLevel(logging.WARNING)
         self.log.debug('Loaded repoman.Updates')
         self.repo = Repo()
         self.parent = parent

@@ -78,7 +78,6 @@ class PPAObject(dbus.service.Object):
             sender, conn, 'ro.santopiet.repoman.modppa'
         )
         # PPA Add code here
-        print("Adding repo")
         try:
             new_source = repolib.Source(
                 name=name,

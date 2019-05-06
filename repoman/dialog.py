@@ -209,8 +209,6 @@ class AddDialog(Gtk.Dialog):
         self.log.setLevel(logging.WARNING)
         self.repo = Repo()
 
-        # self.ppa = PPA(parent)
-
         content_area = self.get_content_area()
 
         content_area = self.get_content_area()
@@ -242,8 +240,6 @@ class AddDialog(Gtk.Dialog):
 
         name_label = Gtk.Label(_("Name:"))
         name_label.set_halign(Gtk.Align.END)
-        # source_label = Gtk.Label(_('Include Source Code:'))
-        # source_label.set_halign(Gtk.Align.END)
         uri_label = Gtk.Label(_("URI:"))
         uri_label.set_halign(Gtk.Align.END)
         version_label = Gtk.Label(_("Version:"))
@@ -251,7 +247,6 @@ class AddDialog(Gtk.Dialog):
         component_label = Gtk.Label(_("Component:"))
         component_label.set_halign(Gtk.Align.END)
         content_grid.attach(name_label, 0, 4, 1, 1)
-        # content_grid.attach(source_label, 0, 8, 1, 1)
         content_grid.attach(uri_label, 0, 5, 1, 1)
         content_grid.attach(version_label, 0, 6, 1, 1)
         content_grid.attach(component_label, 0, 7, 1, 1)
@@ -439,8 +434,6 @@ class EditDialog(Gtk.Dialog):
 
         self.repo = Repo()
         self.source = self.repo.get_source(repo_filename)
-
-        # self.ppa = PPA(self)
         self.parent = parent
 
         self.props.resizable = False

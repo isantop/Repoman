@@ -13,7 +13,7 @@ Repoman is based on [PPAExtender](https://github.com/mirkobrombin/PPAExtender)
 - python3 (>= 3.6)
 - libgtk-3-dev
 - libgranite-dev
-- software-properties-common
+- python3-repolib (= 1)
 - gir1.2-gtk-3.0
 - python-requests
 

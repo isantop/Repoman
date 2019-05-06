@@ -5,7 +5,6 @@ Maintainer: Ian Santopietro <ian@system76.com>
 Build-Depends: debhelper (>= 10),
                dh-python,
                python3-all,
-               software-properties-common,
                gir1.2-gtk-3.0,
 Standards-Version: 4.3.0
 X-Python3-Version: >= 3.6
@@ -16,6 +15,8 @@ Depends: ${python3:Depends}, ${misc:Depends},
          software-properties-common,
          gir1.2-gtk-3.0,
          python-requests,
+         python3-repolib (>= 1),
+         python3-repolib (<< 2)
 Recommends: flatpak,
             python3-pyflatpak
 Description: Easily manage software sources!

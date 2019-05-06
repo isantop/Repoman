@@ -23,9 +23,10 @@ import gi
 import logging
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from softwareproperties.SoftwareProperties import SoftwareProperties
-from .ppa import PPA
+
 from .dialog import AddDialog, EditDialog
+from .repo import Repo
+
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -37,10 +38,9 @@ class List(Gtk.Box):
     ppa_name = False
 
     def __init__(self, parent):
-        self.sp = SoftwareProperties()
         Gtk.Box.__init__(self, False, 0)
         self.parent = parent
-        self.ppa = PPA(self)
+        self.repo = Repo(parent=self.parent)
 
         self.settings = Gtk.Settings()
 
@@ -78,8 +78,8 @@ class List(Gtk.Box):
         list_window = Gtk.ScrolledWindow()
         list_grid.attach(list_window, 0, 0, 1, 1)
 
-        self.ppa_liststore = Gtk.ListStore(str, str)
-        self.view = Gtk.TreeView(self.ppa_liststore)
+        self.repo_liststore = Gtk.ListStore(str, str)
+        self.view = Gtk.TreeView(self.repo_liststore)
         renderer = Gtk.CellRendererText()
         column = Gtk.TreeViewColumn(_("Source"), renderer, markup=0)
         self.view.append_column(column)
@@ -114,113 +114,82 @@ class List(Gtk.Box):
         action_bar.insert(add_button, 0)
         list_grid.attach(action_bar, 0, 1, 1, 1)
 
-        self.generate_entries(self.ppa.get_isv())
+        self.generate_entries(self.repo.get_sources())
 
     def on_edit_button_clicked(self, widget):
-        selec = self.view.get_selection()
-        (model, pathlist) = selec.get_selected_rows()
+        """
+        Edit Button Handler.
+        """
+        tree_selection = self.view.get_selection()
+        (model, pathlist) = tree_selection.get_selected_rows()
         tree_iter = model.get_iter(pathlist[0])
         value = model.get_value(tree_iter, 1)
-        self.log.info("PPA to edit: %s" % value)
+        self.log.info('PPA to edit: %s', value)
         self.do_edit(value)
 
-    def on_row_activated(self, widget, data1, data2):
-        tree_iter = self.ppa_liststore.get_iter(data1)
-        value = self.ppa_liststore.get_value(tree_iter, 1)
+    def on_row_activated(self, widget, data, data2):
+        tree_iter = self.repo_liststore.get_iter(data)
+        value = self.repo_liststore.get_value(tree_iter, 1)
         self.log.info("PPA to edit: %s" % value)
         self.do_edit(value)
 
     def do_edit(self, repo):
-        source = self.ppa.deb_line_to_source(repo)
-        dialog = EditDialog(self.parent.parent,
-                            source.disabled,
-                            source.type,
-                            source.uri,
-                            source.dist,
-                            source.comps,
-                            source.architectures,
-                            repo)
+        dialog = EditDialog(self.parent.parent, repo)
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
-            if dialog.type_box.get_active() == 0:
-                new_rtype = "deb"
-            elif dialog.type_box.get_active() == 1:
-                new_rtype = "deb-src"
-            new_disabled = not dialog.enabled_switch.get_active()
-            new_uri = dialog.uri_entry.get_text()
-            self.log.info(new_disabled)
-            new_version = dialog.version_entry.get_text()
-            new_component = dialog.component_entry.get_text()
+            dialog.source.name = dialog.name_entry.get_text()
+            dialog.source.uris = dialog.uri_entry.get_text().split()
+            dialog.source.suites = dialog.version_entry.get_text().split()
+            dialog.source.components = dialog.component_entry.get_text().split()
+            dialog.source.set_enabled(dialog.enabled_switch.get_active())
+            dialog.source.set_source_enabled(dialog.source_check.get_active())
+            self.repo.set_modified_source(dialog.source)
             dialog.destroy()
-            new_archs = "[arch="
-            for arch in source.architectures:
-                new_archs = "%s%s," % (new_archs, arch)
-            new_archs = new_archs[:-1] + "]"
-            old_source = self.ppa.get_line(
-                source.disabled,
-                source.type,
-                source.architectures,
-                source.uri,
-                source.dist,
-                source.comps
-            )
-            self.ppa.modify_ppa(old_source,
-                                new_disabled,
-                                new_rtype,
-                                new_archs,
-                                new_uri,
-                                new_version,
-                                new_component)
-            self.generate_entries(self.ppa.get_isv())
         else:
             dialog.destroy()
-            self.generate_entries(self.ppa.get_isv())
+        self.generate_entries(self.repo.get_sources())
 
     def on_add_button_clicked(self, widget):
-        #self.ppa.remove(self.ppa_name)
         dialog = AddDialog(self.parent.parent)
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
-            url = dialog.ppa_entry.get_text()
+            self.repo.add_source(dialog)
             dialog.destroy()
-            self.ppa.add(url)
+            self.generate_entries(self.repo.get_sources())
         else:
             dialog.destroy()
-
-    def generate_entries(self, isv_list):
-        self.ppa_liststore.clear()
-
-        self.listiter_count = self.listiter_count + 1
-
-        for source in isv_list:
-            if not "cdrom" in str(source):
-                if not str(source).startswith("#"):
-                    source_pretty = self.sp.render_source(source)
-                    if "Partners" in source_pretty:
-                        continue
-                    self.ppa_liststore.insert_with_valuesv(-1,
-                                                           [0, 1],
-                                                           [source_pretty, str(source)])
-        for source in isv_list:
-            if not "cdrom" in str(source):
-                if str(source).startswith("#"):
-                    source_str_list = self.sp.render_source(source).split("b>")
-                    source_pretty = "%s%s <i>Disabled</i>" % (source_str_list[1][:-2],
-                                                              source_str_list[2])
-                    if "Partners" in source_pretty:
-                        continue
-                    self.ppa_liststore.insert_with_valuesv(-1,
-                                                           [0, 1],
-                                                           [source_pretty, str(source)])
+        self.generate_entries(self.repo.get_sources())
+    
+    def generate_entries(self, sources):
+        """
+        Add entries to the listview.
+        """
+        self.repo_liststore.clear()
+        
+        for repo in sources:
+            if not 'Disabled' in sources[repo]:
+                self.repo_liststore.append(
+                    [
+                        sources[repo], repo
+                    ]
+                )
+        for repo in sources:
+            if 'Disabled' in sources[repo]:
+                self.repo_liststore.append(
+                    [
+                        sources[repo], repo
+                    ]
+                )
 
     def on_row_change(self, widget):
         (model, pathlist) = widget.get_selected_rows()
         for path in pathlist :
             tree_iter = model.get_iter(path)
             value = model.get_value(tree_iter,1)
-            self.ppa_name = value
+            self.log.debug(value)
+            self.repo_name = value
 
     def throw_error_dialog(self, message, msg_type):
         if msg_type == "error":

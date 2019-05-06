@@ -23,7 +23,9 @@ import logging
 import gi
 gi.require_version('Gtk', '3.0')
 from gi.repository import Gtk
-from .ppa import PPA
+
+from .repo import Repo
+
 import gettext
 gettext.bindtextdomain('repoman', '/usr/share/repoman/po')
 gettext.textdomain("repoman")
@@ -40,12 +42,13 @@ class Updates(Gtk.Box):
         handler.setFormatter(formatter)
         self.log.addHandler(handler)
         self.log.setLevel(logging.WARNING)
-
+        self.log.debug('Loaded repoman.Updates')
+        self.repo = Repo()
         self.parent = parent
-
-        self.ppa = PPA(self)
-        self.os_name = self.ppa.get_os_name()
+        self.os_name = self.repo.get_os_name()
         self.handlers = {}
+        self.codename = self.repo.get_codename()
+        self.system_suites = self.repo.get_system_suites()
 
         updates_grid = Gtk.Grid()
         updates_grid.set_margin_left(12)
@@ -67,12 +70,52 @@ class Updates(Gtk.Box):
         updates_label.set_halign(Gtk.Align.START)
         updates_grid.attach(updates_label, 0, 1, 1, 1)
 
-        self.checks_grid = Gtk.VBox()
-        self.checks_grid.set_margin_left(12)
+        self.checks_grid = Gtk.Grid()
+        self.checks_grid.set_margin_left(36)
         self.checks_grid.set_margin_top(24)
-        self.checks_grid.set_margin_right(12)
-        self.checks_grid.set_margin_bottom(12)
+        self.checks_grid.set_margin_right(36)
+        self.checks_grid.set_margin_bottom(24)
+        self.checks_grid.set_column_spacing(12)
+        self.checks_grid.set_halign(Gtk.Align.FILL)
+        self.checks_grid.set_hexpand(True)
         updates_grid.attach(self.checks_grid, 0, 2, 1, 1)
+
+        self.security_label = Gtk.Label('Important security updates (-security)')
+        self.security_label.set_halign(Gtk.Align.START)
+        self.updates_label = Gtk.Label(_('Recommended updates (-updates)'))
+        self.updates_label.set_halign(Gtk.Align.START)
+        self.backports_label = Gtk.Label(_('Unsupported updates (-backports)'))
+        self.backports_label.set_halign(Gtk.Align.START)
+
+        self.checks_grid.attach(self.security_label, 0, 0, 1, 1)
+        self.checks_grid.attach(self.updates_label, 0, 1, 1, 1)
+        self.checks_grid.attach(self.backports_label, 0, 2, 1, 1)
+
+        self.security_switch = Gtk.Switch()
+        self.security_switch.set_halign(Gtk.Align.END)
+        self.security_switch.set_hexpand(True)
+        self.security_switch.suite_name = '-security'
+        self.updates_switch = Gtk.Switch()
+        self.updates_switch.set_halign(Gtk.Align.END)
+        self.updates_switch.suite_name = '-updates'
+        self.backports_switch = Gtk.Switch()
+        self.backports_switch.set_halign(Gtk.Align.END)
+        self.backports_switch.suite_name = '-backports'
+        
+        self.suite_switches = {
+            '-security':  self.security_switch,
+            '-updates':   self.updates_switch,
+            '-backports': self.backports_switch
+        }
+        
+        self.setup_suites()
+        self.security_switch.connect('state-set', self.on_switch_toggled)
+        self.updates_switch.connect('state-set', self.on_switch_toggled)
+        self.backports_switch.connect('state-set', self.on_switch_toggled)
+
+        self.checks_grid.attach(self.security_switch, 1, 0, 1, 1)
+        self.checks_grid.attach(self.updates_switch, 1, 1, 1, 1)
+        self.checks_grid.attach(self.backports_switch, 1, 2, 1, 1)
 
         separator = Gtk.HSeparator()
         updates_grid.attach(separator, 0, 3, 1, 1)
@@ -98,68 +141,35 @@ class Updates(Gtk.Box):
         notify_check = Gtk.CheckButton.new_with_label(_("Notify about new updates"))
         self.noti_grid.attach(notify_check, 0, 0, 1, 1)
 
-
         auto_check = Gtk.CheckButton.new_with_label(_("Automatically install important security updates."))
         self.noti_grid.attach(auto_check, 0, 1, 1, 1)
 
         version_check = Gtk.CheckButton.new_with_label(_("Notify about new versions of %s") % self.os_name)
         self.noti_grid.attach(version_check, 0, 2, 1, 1)
-
-        self.init_updates()
-        self.show_updates()
-
-    def block_handlers(self):
-        for widget in self.handlers:
-            if widget.handler_is_connected(self.handlers[widget]):
-                widget.handler_block(self.handlers[widget])
-
-    def unblock_handlers(self):
-        for widget in self.handlers:
-            if widget.handler_is_connected(self.handlers[widget]):
-                widget.handler_unblock(self.handlers[widget])
-
-    def init_updates(self):
-        self.log.debug("init_distro")
-
-        for checkbutton in self.checks_grid.get_children():
-            self.checks_grid.remove(checkbutton)
-
-        comp_children = self.ppa.get_distro_child_repos()
-
-        for template in comp_children:
-            # Do not show -proposed or source entries here
-            if template.type == "deb-src":
-                continue
-            if "proposed" in template.name:
-                continue
-
-            if template.description == "Unsupported Updates":
-                description = _("Backported Updates")
-            else:
-                description = template.description
-
-            checkbox = Gtk.CheckButton(label="%s (%s)" % (description,
-                                                          template.name))
-            checkbox.template = template
-            self.handlers[checkbox] = checkbox.connect("toggled",
-                                                       self.on_child_toggled,
-                                                       template)
-            self.checks_grid.add(checkbox)
-            checkbox.show()
-        return 0
-
-    def show_updates(self):
-        self.block_handlers()
-        self.log.debug("show updates")
-
-        for checkbox in self.checks_grid.get_children():
-            (active, inconsistent) = self.ppa.get_child_download_state(checkbox.template)
-            checkbox.set_active(active)
-            checkbox.set_inconsistent(inconsistent)
-        self.unblock_handlers()
-        return 0
-
-    def on_child_toggled(self, checkbutton, child):
-        enabled = checkbutton.get_active()
-        self.ppa.set_child_enabled(child, enabled)
-
+    
+    def on_switch_toggled(self, widget, data=None):
+        """
+        Handler for switches.
+        """
+        if not widget.get_active():
+            self.log.debug('Disabling system suite: %s' % widget.suite_name)
+            self.repo.remove_suite_from_source(
+                source_name='system',
+                suite='{}{}'.format(self.codename, widget.suite_name)
+            )
+        else:
+            self.log.debug('Enabling system suite: %s' % widget.suite_name)
+            self.repo.add_suite_to_source(
+                source_name='system',
+                suite='{}{}'.format(self.codename, widget.suite_name)
+            )
+    
+    def setup_suites(self):
+        """
+        Sets the initial state of the switches in the window.
+        """
+        for i in self.system_suites:
+            suite = i.replace(self.codename, '')
+            self.log.debug('Got suite: %s' % suite)
+            if suite in self.suite_switches:
+                self.suite_switches[suite].set_active(True)

@@ -45,6 +45,10 @@ privileged_object = bus.get_object(
     'ro.santopiet.repoman', '/PPAObject'
 )
 
+SYSTEM_SOURCES = [
+    '/etc/apt/sources.list.d/system.sources'
+]
+
 class Repo:
 
     def __init__(self, parent=None):
@@ -68,8 +72,9 @@ class Repo:
         sources_dict = {}
         sources = glob.glob('{}/*.sources'.format(SOURCES_DIR))
         for source in sources:
-            source_obj.load_from_file(source)
-            sources_dict[source] = source_obj.name
+            if not source in SYSTEM_SOURCES:
+                source_obj.load_from_file(source)
+                sources_dict[source] = source_obj.name
         return sources_dict
     
     def get_source(self, file):
@@ -136,3 +141,28 @@ class Repo:
     def remove_suite_from_source(self, source_name='system', suite='main'):
         privileged_object.DelSuite(source_name, suite)
         return 0
+    
+    def set_modified_source(self, source):
+        print(source.make_source_string())
+        
+        source_code_enabled = False
+        for type in source.types:
+            if type.value == "deb-src":
+                source_code_enabled = True
+        
+        source_modified = (
+            'name={},\n'.format(source.name) +
+            'enabled={},\n'.format(source.enabled.get_bool()) +
+            'source={},\n'.format(source_code_enabled) +
+            'uris={},\n'.format(' '.join(source.uris)) +
+            'suites={},\n'.format(' '.join(source.suites)) +
+            'components={},\n'.format(' '.join(source.components)) +
+            'filename={}'.format(source.filename) 
+        )
+        self.log.debug('SetModifiedRepo(%s)' % source_modified)
+        
+        privileged_object.SetModifiedRepo(
+            source.name, source.enabled.get_bool(), source_code_enabled,
+            ' '.join(source.uris), ' '.join(source.suites), 
+            ' '.join(source.components), source.filename
+        )

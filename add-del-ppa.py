@@ -52,9 +52,9 @@ class PPAObject(dbus.service.Object):
         in_signature='s', out_signature='i',
         sender_keyword='sender', connection_keyword='conn'
     )
-    def DelPPA(self, ppa, sender=None, conn=None):
+    def DelRepo(self, ppa, sender=None, conn=None):
         self._check_polkit_privilege(
-            sender, conn, 'ro.santopiet.repoman.delppa'
+            sender, conn, 'ro.santopiet.repoman.modppa'
         )
         # PPA Remove code here
         try:
@@ -170,9 +170,9 @@ class PPAObject(dbus.service.Object):
         in_signature='s', out_signature='i',
         sender_keyword='sender', connection_keyword='conn'
     )
-    def AddPPA(self, ppa, sender=None, conn=None):
+    def AddRepo(self, ppa, sender=None, conn=None):
         self._check_polkit_privilege(
-            sender, conn, 'ro.santopiet.repoman.addppa'
+            sender, conn, 'ro.santopiet.repoman.modppa'
         )
         # PPA Add code here
         try:
@@ -182,15 +182,34 @@ class PPAObject(dbus.service.Object):
     
     @dbus.service.method(
         "ro.santopiet.repoman.Interface",
-        in_signature='ss', out_signature='i',
+        in_signature='sbbssss', out_signature='i',
         sender_keyword='sender', connection_keyword='conn'
     )
-    def ModifyPPA(self, old_source, new_source, sender=None, conn=None):
+    def SetModifiedRepo(
+        self, 
+        name, 
+        enabled, 
+        source_code, 
+        uris, 
+        suites, 
+        components, 
+        filename,
+        sender=None, 
+        conn=None):
         self._check_polkit_privilege(
             sender, conn, 'ro.santopiet.repoman.modppa'
         )
         # PPA Modify code here
         try:
+            source = repolib.Source(filename=filename)
+            source.load_from_file()
+            source.name=name
+            source.set_enabled(enabled)
+            source.uris=uris.split()
+            source.suites=suites.split()
+            source.components=components.split()
+            source.set_source_enabled(source_code)
+            source.save_to_disk()
             return 0
         except:
             raise AptException("Could not modify the APT Source")

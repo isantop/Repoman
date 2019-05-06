@@ -141,9 +141,15 @@ class List(Gtk.Box):
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
-            # url = dialog.ppa_entry.get_text()
+            dialog.source.name = dialog.name_entry.get_text()
+            dialog.source.uris = dialog.uri_entry.get_text().split()
+            dialog.source.suites = dialog.version_entry.get_text().split()
+            dialog.source.components = dialog.component_entry.get_text().split()
+            dialog.source.set_enabled(dialog.enabled_switch.get_active())
+            dialog.source.set_source_enabled(dialog.source_check.get_active())
+            self.repo.set_modified_source(dialog.source)
             dialog.destroy()
-            # self.ppa.add(url)
+            self.generate_entries(self.repo.get_sources())
         else:
             dialog.destroy()
 
@@ -153,7 +159,6 @@ class List(Gtk.Box):
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
-            # url = dialog.ppa_entry.get_text()
             dialog.destroy()
             # self.ppa.add(url)
         else:
@@ -166,14 +171,11 @@ class List(Gtk.Box):
         self.repo_liststore.clear()
         
         for repo in sources:
-            if repo.lower() == "system":
-                continue
-            else:
-                self.repo_liststore.append(
-                    [
-                        sources[repo], repo
-                    ]
-                )
+            self.repo_liststore.append(
+                [
+                    sources[repo], repo
+                ]
+            )
 
 
     # def generate_entries(self, isv_list):

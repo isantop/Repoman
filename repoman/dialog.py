@@ -518,7 +518,6 @@ class EditDialog(Gtk.Dialog):
         Gtk.StyleContext.add_class(save_button.get_style_context(),
                                    "suggested-action")
 
-
         action_area = self.get_action_area()
         action_area.add(remove_button)
         separator = Gtk.Box()
@@ -530,7 +529,6 @@ class EditDialog(Gtk.Dialog):
         action_area.add(separator2)
         separator2.show()
         action_area.props.layout_style = Gtk.ButtonBoxStyle.START
-
 
         self.show_all()
 

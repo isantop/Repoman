@@ -44,4 +44,5 @@ setup(
         ('/usr/lib/repoman', ['add-del-ppa.py', 'data/repoman.pkexec'])
     ],
     scripts = ['repoman/repoman'],
+    cmdclass={'release': DebRelease},
 )

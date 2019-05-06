@@ -49,6 +49,33 @@ SYSTEM_SOURCES = [
     '/etc/apt/sources.list.d/system.sources'
 ]
 
+class AddThread(threading.Thread):
+    cache = apt.Cache()
+
+    def __init__(self, parent, source_line):
+        threading.Thread.__init__(self)
+        self.parent = parent
+        self.source_line = source_line
+        self.log = logging.getLogger("repoman.PPA.AddThread")
+        handler = logging.StreamHandler()
+        formatter = logging.Formatter('%(asctime)s %(name)-12s %(levelname)-8s %(message)s')
+        handler.setFormatter(formatter)
+        self.log.addHandler(handler)
+        self.log.setLevel(logging.WARNING)
+
+    def run(self):
+        self.log.info("Adding PPA %s" % (self.source_line))
+        privileged_object.AddRepo(self.source_line)
+        repo = Repo()
+        isv_list = repo.get_sources()
+        GObject.idle_add(self.parent.parent.stack.list_all.generate_entries, isv_list)
+        GObject.idle_add(self.parent.parent.stack.list_all.view.set_sensitive, True)
+        GObject.idle_add(self.parent.parent.hbar.spinner.stop)
+
+    def throw_error(self, message):
+        GObject.idle_add(self.parent.parent.stack.list_all.throw_error_dialog,
+                         message, "error")
+
 class Repo:
 
     def __init__(self, parent=None):
@@ -114,12 +141,6 @@ class Repo:
         
         return False
     
-    def set_source_code_enabled(self, source_name='system', is_enabled=True):
-        """
-        Enables or disabled source code for the repo.
-        """
-        privileged_object.SetSource(source_name, is_enabled)
-    
     def get_codename(self):
         """
         Gets the current distro codename.
@@ -141,6 +162,41 @@ class Repo:
     def remove_suite_from_source(self, source_name='system', suite='main'):
         privileged_object.DelSuite(source_name, suite)
         return 0
+    
+    def add_source(self, dialog):
+        if dialog.ppa_entry.get_text() == '':
+            source_name = dialog.name_entry.get_text()
+            source_uris = dialog.uri_entry.get_text()
+            source_suites = dialog.version_entry.get_text()
+            source_components = dialog.component_entry.get_text()
+            source_code = dialog.source_check.get_active()
+            self.log.debug('Adding full repo...')
+            fullrepo = (
+                'name={},\n'.format(source_name) +
+                'uris={},\n'.format(source_uris) +
+                'suites={},\n'.format(source_suites) +
+                'components={},\n'.format(source_components) +
+                'code={}'.format(source_code)
+            )
+            self.log.debug('AddFullRepo(%s)' % fullrepo)
+            privileged_object.AddFullRepo(
+                source_name, source_uris, source_suites, source_components, source_code
+            )
+        elif dialog.ppa_entry.get_text() != '': 
+            source_line = dialog.ppa_entry.get_text()
+            self.parent.parent.hbar.spinner.start()
+            self.parent.parent.stack.list_all.view.set_sensitive(False)
+            t = AddThread(self.parent, source_line)
+            t.start()
+
+    def remove_source(self, source):
+        privileged_object.DelRepo(source)
+    
+    def set_source_code_enabled(self, source_name='system', is_enabled=True):
+        """
+        Enables or disabled source code for the repo.
+        """
+        privileged_object.SetSource(source_name, is_enabled)
     
     def set_modified_source(self, source):
         print(source.make_source_string())

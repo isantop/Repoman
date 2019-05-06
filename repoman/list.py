@@ -41,7 +41,7 @@ class List(Gtk.Box):
         # self.sp = SoftwareProperties()
         Gtk.Box.__init__(self, False, 0)
         self.parent = parent
-        self.repo = Repo()
+        self.repo = Repo(parent=self.parent)
 
         self.settings = Gtk.Settings()
 
@@ -149,9 +149,9 @@ class List(Gtk.Box):
             dialog.source.set_source_enabled(dialog.source_check.get_active())
             self.repo.set_modified_source(dialog.source)
             dialog.destroy()
-            self.generate_entries(self.repo.get_sources())
         else:
             dialog.destroy()
+        self.generate_entries(self.repo.get_sources())
 
     def on_add_button_clicked(self, widget):
         #self.ppa.remove(self.ppa_name)
@@ -159,10 +159,12 @@ class List(Gtk.Box):
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
+            self.repo.add_source(dialog)
             dialog.destroy()
-            # self.ppa.add(url)
+            self.generate_entries(self.repo.get_sources())
         else:
             dialog.destroy()
+        self.generate_entries(self.repo.get_sources())
     
     def generate_entries(self, sources):
         """

@@ -262,10 +262,10 @@ class AddDialog(Gtk.Dialog):
         self.name_entry.connect(_("changed"), self.on_top_entry_changed)
         content_grid.attach(self.name_entry, 1, 4, 1, 1)
 
-        self.source_switch = Gtk.CheckButton(_('Include Source Code'))
-        self.source_switch.set_active(False)
-        self.source_switch.set_halign(Gtk.Align.CENTER)
-        content_grid.attach(self.source_switch, 0, 8, 2, 1)
+        self.source_check = Gtk.CheckButton(_('Include Source Code'))
+        self.source_check.set_active(False)
+        self.source_check.set_halign(Gtk.Align.CENTER)
+        content_grid.attach(self.source_check, 0, 8, 2, 1)
 
         self.uri_entry = Gtk.Entry()
         self.uri_entry.set_placeholder_text("https://ppa.launchpad.net/...")
@@ -306,31 +306,45 @@ class AddDialog(Gtk.Dialog):
             self.uri_entry.set_sensitive(True)
             self.version_entry.set_sensitive(True)
             self.component_entry.set_sensitive(True)
-            self.source_switch.set_sensitive(True)
+            self.source_check.set_sensitive(True)
             self.ppa_entry.set_sensitive(True)
+            self.add_button.set_sensitive(False)
         else:
             self.name_entry.set_sensitive(True)
             self.uri_entry.set_sensitive(True)
             self.version_entry.set_sensitive(True)
             self.component_entry.set_sensitive(True)
-            self.source_switch.set_sensitive(True)
+            self.source_check.set_sensitive(True)
+            self.add_button.set_sensitive(True)
             self.ppa_entry.set_sensitive(False)
     
     def on_bottom_entry_changed(self, widget):
-        if widget.get_text() == '' or widget.get_text() == None:
+        ppa_line = widget.get_text()
+        if ppa_line == '' or ppa_line == None:
             self.name_entry.set_sensitive(True)
             self.uri_entry.set_sensitive(True)
             self.version_entry.set_sensitive(True)
             self.component_entry.set_sensitive(True)
-            self.source_switch.set_sensitive(True)
+            self.source_check.set_sensitive(True)
             self.ppa_entry.set_sensitive(True)
+            self.add_button.set_sensitive(False)
         else:
             self.name_entry.set_sensitive(False)
             self.uri_entry.set_sensitive(False)
             self.version_entry.set_sensitive(False)
             self.component_entry.set_sensitive(False)
-            self.source_switch.set_sensitive(False)
+            self.source_check.set_sensitive(False)
             self.ppa_entry.set_sensitive(True)
+
+            if ppa_line.startswith('deb'):
+                self.add_button.set_sensitive(True)
+            elif ppa_line.startswith('ppa:'):
+                if '/' in ppa_line:
+                    self.add_button.set_sensitive(True)
+                else: 
+                    self.add_button.set_sensitive(False)
+            else:
+                self.add_button.set_sensitive(False)
 
 class FpAddDialog(Gtk.Dialog):
 
@@ -398,8 +412,6 @@ class FpAddDialog(Gtk.Dialog):
             self.add_button.set_sensitive(entry_valid)
         except TypeError:
             pass
-
-
 
 class EditDialog(Gtk.Dialog):
 
@@ -544,7 +556,7 @@ class EditDialog(Gtk.Dialog):
         response = dialog.run()
 
         if response == Gtk.ResponseType.OK:
-            # self.ppa.remove(self.repo_whole)
+            self.repo.remove_source(self.source.filename)
             dialog.destroy()
             self.destroy()
         else:

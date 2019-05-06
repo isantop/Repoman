@@ -24,6 +24,7 @@ import dbus.service
 import dbus.mainloop.glib
 
 import time
+import os
 
 import repolib
 
@@ -52,12 +53,59 @@ class PPAObject(dbus.service.Object):
         in_signature='s', out_signature='i',
         sender_keyword='sender', connection_keyword='conn'
     )
-    def DelRepo(self, ppa, sender=None, conn=None):
+    def AddRepo(self, line, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        # PPA Add code here
+        try:
+            if line.startswith('deb'):
+                new_source = repolib.DebLine(line)
+            elif line.startswith('ppa:'):
+                new_source = repolib.PPALine(line)
+            new_source.save_to_disk()
+            return 0
+        except:
+            raise AptException("Could not Add the APT Source")
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='ssssb', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def AddFullRepo(self, name, uris, suites, components, code, sender=None, conn=None):
+        self._check_polkit_privilege(
+            sender, conn, 'ro.santopiet.repoman.modppa'
+        )
+        # PPA Add code here
+        print("Adding repo")
+        try:
+            new_source = repolib.Source(
+                name=name,
+                uris=uris.split(),
+                suites=suites.split(),
+                components=components.split(),
+            )
+            new_source.set_source_enabled(code)
+            new_source.filename = name.translate(repolib.util.CLEAN_CHARS)
+            new_source.filename += '.sources'
+            new_source.save_to_disk()
+            return 0
+        except:
+            raise AptException("Could not remove the APT Source")
+    
+    @dbus.service.method(
+        "ro.santopiet.repoman.Interface",
+        in_signature='s', out_signature='i',
+        sender_keyword='sender', connection_keyword='conn'
+    )
+    def DelRepo(self, filename, sender=None, conn=None):
         self._check_polkit_privilege(
             sender, conn, 'ro.santopiet.repoman.modppa'
         )
         # PPA Remove code here
         try:
+            os.remove(filename)
             return 0
         except:
             raise AptException("Could not remove the APT Source")
@@ -167,35 +215,10 @@ class PPAObject(dbus.service.Object):
     
     @dbus.service.method(
         "ro.santopiet.repoman.Interface",
-        in_signature='s', out_signature='i',
-        sender_keyword='sender', connection_keyword='conn'
-    )
-    def AddRepo(self, ppa, sender=None, conn=None):
-        self._check_polkit_privilege(
-            sender, conn, 'ro.santopiet.repoman.modppa'
-        )
-        # PPA Add code here
-        try:
-            return 0
-        except:
-            raise AptException("Could not remove the APT Source")
-    
-    @dbus.service.method(
-        "ro.santopiet.repoman.Interface",
         in_signature='sbbssss', out_signature='i',
         sender_keyword='sender', connection_keyword='conn'
     )
-    def SetModifiedRepo(
-        self, 
-        name, 
-        enabled, 
-        source_code, 
-        uris, 
-        suites, 
-        components, 
-        filename,
-        sender=None, 
-        conn=None):
+    def SetModifiedRepo(self, name, enabled, source_code, uris, suites, components, filename, sender=None, conn=None):
         self._check_polkit_privilege(
             sender, conn, 'ro.santopiet.repoman.modppa'
         )
